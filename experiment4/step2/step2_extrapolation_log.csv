@@ -1,0 +1,6 @@
+split,xmu_left_extrap,xmu_right_extrap,chi_right_extrap
+train,92476,0,0
+val,11645,0,0
+test,6942,0,0
+holdout,4607,0,0
+TOTAL,115670,0,0

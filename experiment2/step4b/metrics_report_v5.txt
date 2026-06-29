@@ -1,0 +1,49 @@
+Step4b Metrics Report (v5)
+坐标系：Dataset v6 [0,1]，匹配/RMSD 使用最小镜像周期边界距离
+============================================================
+
+=== Val Set Metrics (Step4b v5, min-image Hungarian matching) ===
+N_samples        : 1624
+RMSD (Å)         : mean=4.1665  median=4.2347  std=0.7159
+Type Accuracy    : mean=0.2704  median=0.2500
+
+原子密度参考（eval_cutoff 内，最小镜像到 Fe 原点）：
+  pred_in_cutoff : mean=2.89 / 20
+  true_in_cutoff : mean=16.90 / 20
+  （验收要求：pred ≈ true ≈ 17/20）
+
+── 子群：eval_cutoff ──
+  < 3.0 Å       N=    2  RMSD=4.3788  TypeAcc=0.0000
+  3.0–4.0 Å     N=  925  RMSD=4.2763  TypeAcc=0.2955
+
+── 子群：n_true_in（eval_cutoff 内真实原子数）──
+  ≤ 8（第一壳层）             N=   59  RMSD=3.6789  TypeAcc=0.1059
+  9–14（第二壳层）            N=  363  RMSD=3.9433  TypeAcc=0.2132
+  15–20（第三壳层）           N= 1202  RMSD=4.2578  TypeAcc=0.2958
+
+随机基线 RMSD ≈ 4.65 Å（[-L/2,L/2] 均匀分布期望）
+Step4b 验收标准：RMSD < 2.0 Å，pred_in_cutoff ≈ true_in_cutoff ≈ 17/20
+⚠️  模型略优于随机基线（< 90%），需进一步分析
+
+=== Test Set Metrics (Step4b v5, min-image Hungarian matching) ===
+N_samples        : 1626
+RMSD (Å)         : mean=4.2290  median=4.2835  std=0.6811
+Type Accuracy    : mean=0.2673  median=0.2500
+
+原子密度参考（eval_cutoff 内，最小镜像到 Fe 原点）：
+  pred_in_cutoff : mean=2.66 / 20
+  true_in_cutoff : mean=16.93 / 20
+  （验收要求：pred ≈ true ≈ 17/20）
+
+── 子群：eval_cutoff ──
+  < 3.0 Å       N=    1  RMSD=4.0452  TypeAcc=0.0000
+  3.0–4.0 Å     N=  902  RMSD=4.3451  TypeAcc=0.2883
+
+── 子群：n_true_in（eval_cutoff 内真实原子数）──
+  ≤ 8（第一壳层）             N=   57  RMSD=3.6742  TypeAcc=0.1053
+  9–14（第二壳层）            N=  354  RMSD=4.0381  TypeAcc=0.2257
+  15–20（第三壳层）           N= 1215  RMSD=4.3107  TypeAcc=0.2870
+
+随机基线 RMSD ≈ 4.65 Å（[-L/2,L/2] 均匀分布期望）
+Step4b 验收标准：RMSD < 2.0 Å，pred_in_cutoff ≈ true_in_cutoff ≈ 17/20
+❌ 模型未有效优于随机基线，需汇报 Main Agent 2

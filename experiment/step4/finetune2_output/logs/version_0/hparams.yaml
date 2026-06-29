@@ -1,0 +1,36 @@
+decoder:
+  _target_: diffcsp.pl_modules.cspnet.CSPNet
+  hidden_dim: 512
+  latent_dim: 0
+  max_atoms: 100
+  num_layers: 6
+  act_fn: silu
+  dis_emb: sin
+  num_freqs: 128
+  edge_style: fc
+  max_neighbors: 20
+  cutoff: 7.0
+  ln: true
+  ip: true
+beta_scheduler:
+  _target_: diffcsp.pl_modules.diff_utils.BetaScheduler
+  timesteps: 1000
+  scheduler_mode: cosine
+sigma_scheduler:
+  _target_: diffcsp.pl_modules.diff_utils.SigmaScheduler
+  timesteps: 1000
+  sigma_begin: 0.005
+  sigma_end: 0.5
+time_dim: 256
+latent_dim: 256
+cost_coord: 1.0
+cost_lattice: 1.0
+max_neighbors: 20
+radius: 7.0
+timesteps: 1000
+optim:
+  optimizer:
+    _target_: torch.optim.Adam
+    lr: 1.0e-05
+  use_lr_scheduler: false
+  lr_scheduler: null

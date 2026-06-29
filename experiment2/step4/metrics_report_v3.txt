@@ -1,0 +1,44 @@
+
+=== Val Set Metrics (full 20-atom matching) ===
+N_samples        : 1624
+RMSD (Å)         : mean=21.3339  median=21.3340  std=1.9018
+Type Accuracy    : mean=0.2738  median=0.2500
+
+原子密度参考（eval_cutoff 内）：
+  pred_in_cutoff : mean=0.36 / 20
+  true_in_cutoff : mean=2.72 / 20
+  （两者接近说明模型原子密度分布合理）
+
+── 子群：eval_cutoff ──
+  < 3.0 Å       N=    2  RMSD=21.7128  TypeAcc=0.0000
+  3.0–4.0 Å     N=  925  RMSD=21.4216  TypeAcc=0.2930
+
+── 子群：n_true_in（eval_cutoff 内真实原子数）──
+  ≤ 8（第一壳层）             N= 1624  RMSD=21.3339  TypeAcc=0.2738
+  9–14（第二壳层）            N=    0  RMSD=nan  TypeAcc=nan
+  15–20（第三壳层）           N=    0  RMSD=nan  TypeAcc=nan
+
+参考：随机基线 RMSD ≈ 4.65 Å（L=12 均匀分布期望）
+⚠️  模型仍未达到有效阈值
+
+=== Test Set Metrics (full 20-atom matching) ===
+N_samples        : 1626
+RMSD (Å)         : mean=21.3361  median=21.3410  std=1.9335
+Type Accuracy    : mean=0.2660  median=0.2500
+
+原子密度参考（eval_cutoff 内）：
+  pred_in_cutoff : mean=0.31 / 20
+  true_in_cutoff : mean=2.78 / 20
+  （两者接近说明模型原子密度分布合理）
+
+── 子群：eval_cutoff ──
+  < 3.0 Å       N=    1  RMSD=17.8342  TypeAcc=0.0000
+  3.0–4.0 Å     N=  902  RMSD=21.4767  TypeAcc=0.2820
+
+── 子群：n_true_in（eval_cutoff 内真实原子数）──
+  ≤ 8（第一壳层）             N= 1626  RMSD=21.3361  TypeAcc=0.2660
+  9–14（第二壳层）            N=    0  RMSD=nan  TypeAcc=nan
+  15–20（第三壳层）           N=    0  RMSD=nan  TypeAcc=nan
+
+参考：随机基线 RMSD ≈ 4.65 Å（L=12 均匀分布期望）
+⚠️  模型仍未达到有效阈值

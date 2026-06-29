@@ -1,0 +1,605 @@
+"""
+diffusion_w_type_xas_exp3.py  (Experiment 3 — Step3c)
+======================================================================
+Base: diffusion_w_type_xas.py (v3 — Step4c, [-0.5, 0.5] coordinate space)
+
+Experiment 3 Changes:
+  1. Added TypeClassifier class — independent element-type MLP head.
+  2. __init__(): loads elem_vocab.json, instantiates TypeClassifier.
+  3. forward(): computes type_ce_loss from SpectrumEncoder latent;
+     total_loss = diffusion_loss + lambda_type * type_ce_loss.
+  4. sample(): replaces decoder atom-type output with TypeClassifier
+     predictions (argmax → atomic-number via inverse vocab mapping).
+
+Coordinate contract (inherited from v3, unchanged):
+  Dataset v5      → frac_coords ∈ [-0.5, 0.5]
+  forward()       → input_frac_coords ∈ [-0.5, 0.5] (no % 1. fold)
+  sample() prior  → x_T ∈ [-0.5, 0.5]  (torch.rand - 0.5)
+  sample() output → frac_coords ∈ [-0.5, 0.5] (min-image clip at final step)
+"""
+
+import json
+import math
+import sys
+import os
+
+# ── 路径设置（必须在所有自定义 import 之前）──────────────────────────────────
+_HERE = os.path.dirname(os.path.abspath(__file__))          # .../experiment3/step3c
+
+# 1. spectrum_encoder.py 位于 experiment2/step2/
+sys.path.insert(0, os.path.join(_HERE, '..', '..', 'experiment2', 'step2'))
+# 2. diffcsp 包位于 DiffCSP-main 根目录
+sys.path.insert(0, os.path.join(_HERE, '..', '..'))
+# 3. 告知 diffcsp.common.utils 项目根路径（避免 PROJECT_ROOT 找不到）
+os.environ.setdefault(
+    'PROJECT_ROOT',
+    os.path.abspath(os.path.join(_HERE, '..', '..'))
+)
+
+from spectrum_encoder import SpectrumEncoder  # noqa: E402
+
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from typing import Any
+
+import hydra
+import pytorch_lightning as pl
+from torch_scatter import scatter
+from tqdm import tqdm
+
+from diffcsp.common.utils import PROJECT_ROOT
+from diffcsp.common.data_utils import (
+    EPSILON, cart_to_frac_coords, mard,
+    lengths_angles_to_volume, lattice_params_to_matrix_torch,
+    frac_to_cart_coords, min_distance_sqr_pbc)
+from diffcsp.pl_modules.diff_utils import d_log_p_wrapped_normal
+
+MAX_ATOMIC_NUM = 100
+
+# ── Experiment 3 新增：TypeClassifier ─────────────────────────────────────────
+
+class TypeClassifier(nn.Module):
+    """
+    独立原子类型分类 Head（Experiment 3）。
+    输入：SpectrumEncoder 的 latent (B, 256)
+    输出：每个邻居位置的元素概率分布 (B, N_NEIGHBORS, N_elem)
+    """
+    def __init__(self, latent_dim: int, n_neighbors: int, n_elem: int):
+        super().__init__()
+        self.n_neighbors = n_neighbors
+        self.n_elem      = n_elem
+        self.mlp = nn.Sequential(
+            nn.Linear(latent_dim, 256),
+            nn.LayerNorm(256),
+            nn.SiLU(),
+            nn.Linear(256, 256),
+            nn.LayerNorm(256),
+            nn.SiLU(),
+            nn.Linear(256, n_neighbors * n_elem),
+        )
+
+    def forward(self, latent):
+        """
+        latent: (B, latent_dim)
+        return: (B, n_neighbors, n_elem)  — raw logits，未经 softmax
+        """
+        B = latent.shape[0]
+        out = self.mlp(latent)                        # (B, n_neighbors * n_elem)
+        return out.view(B, self.n_neighbors, self.n_elem)
+
+
+# ── 基类 ─────────────────────────────────────────────────────────────────────
+
+class BaseModule(pl.LightningModule):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__()
+        self.save_hyperparameters()
+        if hasattr(self.hparams, "model"):
+            self._hparams = self.hparams.model
+
+    def configure_optimizers(self):
+        opt = hydra.utils.instantiate(
+            self.hparams.optim.optimizer,
+            params=self.parameters(), _convert_="partial")
+        if not self.hparams.optim.use_lr_scheduler:
+            return [opt]
+        scheduler = hydra.utils.instantiate(
+            self.hparams.optim.lr_scheduler, optimizer=opt)
+        return {"optimizer": opt, "lr_scheduler": scheduler,
+                "monitor": "val_loss"}
+
+
+# ── 时间嵌入 ──────────────────────────────────────────────────────────────────
+
+class SinusoidalTimeEmbeddings(nn.Module):
+    def __init__(self, dim):
+        super().__init__()
+        self.dim = dim
+
+    def forward(self, time):
+        device   = time.device
+        half_dim = self.dim // 2
+        emb = math.log(10000) / (half_dim - 1)
+        emb = torch.exp(torch.arange(half_dim, device=device) * -emb)
+        emb = time[:, None] * emb[None, :]
+        emb = torch.cat((emb.sin(), emb.cos()), dim=-1)
+        return emb
+
+
+# ── 主模型 ────────────────────────────────────────────────────────────────────
+
+class CSPDiffusion(BaseModule):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.decoder = hydra.utils.instantiate(
+            self.hparams.decoder,
+            latent_dim = self.hparams.latent_dim + self.hparams.time_dim,
+            pred_type  = True,
+            smooth     = True)
+        self.beta_scheduler  = hydra.utils.instantiate(self.hparams.beta_scheduler)
+        self.sigma_scheduler = hydra.utils.instantiate(self.hparams.sigma_scheduler)
+        self.time_dim        = self.hparams.time_dim
+        self.time_embedding  = SinusoidalTimeEmbeddings(self.time_dim)
+        self.keep_lattice    = self.hparams.cost_lattice < 1e-5
+        self.keep_coords     = self.hparams.cost_coord  < 1e-5
+
+        # ★ SpectrumEncoder
+        self.spectrum_encoder = SpectrumEncoder(
+            xmu_dim    = self.hparams.get('xmu_dim',   150),
+            chi_dim    = self.hparams.get('chi_dim',   200),
+            feat_dim   = self.hparams.get('feat_dim',  73),
+            latent_dim = self.hparams.get('spectrum_latent_dim', 256),
+        )
+
+        # ★ density loss 权重（从 YAML 读取，默认 0.5）
+        self.cost_density = float(self.hparams.get('cost_density', 0.5))
+
+        # ── Experiment 3：TypeClassifier ───────────────────────────────
+        vocab_path = self.hparams.get(
+            'vocab_path',
+            r"C:\Users\T-Cat\Desktop\DiffCSP-main\experiment3\step3b\elem_vocab.json"
+        )
+        with open(vocab_path, 'r') as _f:
+            _vocab = json.load(_f)
+        self.elem_vocab   = _vocab                       # {str(Z): class_idx}
+        self.n_elem       = len(_vocab)                  # 83
+        self.type_classifier = TypeClassifier(
+            latent_dim   = self.hparams.get('spectrum_latent_dim', 256),
+            n_neighbors  = 20,
+            n_elem       = self.n_elem,
+        )
+        # 打印参数量，供 Main Agent 验收
+        _tc_params = sum(p.numel() for p in self.type_classifier.parameters())
+        print(f"[Exp3] TypeClassifier 参数量: {_tc_params:,}")
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # ★ 密度正则：Tweedie 估算 x0，最小镜像后 L2 惩罚
+    #   注意：此处的 % 1.0 折叠是"将任意范围的 x0_hat 映射到 [-0.5, 0.5]"
+    #         与 forward() 中已删除的 % 1. 用途不同，必须保留。
+    # ─────────────────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _density_loss(input_frac_coords, pred_x, sigmas_per_atom, sigmas_norm_per_atom):
+        """
+        用 Tweedie 公式从 (x_t, score) 估算去噪后的 x0_hat，
+        再用最小镜像将其映射到 [-0.5, 0.5]，计算 L2 均值。
+        这迫使模型预测的"干净位置"集中于 Fe 原点。
+        """
+        with torch.no_grad():
+            sigma2     = sigmas_per_atom ** 2           # (N, 1)
+            sqrt_norm  = torch.sqrt(sigmas_norm_per_atom)  # (N, 1)
+
+        x0_hat = input_frac_coords + sigma2 * pred_x.detach() * sqrt_norm
+        # 最小镜像：将 x0_hat 折叠到 [-0.5, 0.5]（保留，此处折叠是有意为之）
+        x0_hat_mi = x0_hat % 1.0
+        x0_hat_mi = x0_hat_mi - (x0_hat_mi > 0.5).float()
+        # L2 惩罚（鼓励 x0_hat 集中于原点）
+        return (x0_hat_mi ** 2).mean()
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # forward（训练）
+    # ★ v3 改动：去掉 % 1.，noisy_frac_coords 保持在 [-0.5, 0.5] 附近
+    # ★ Exp3 改动：加入 type_ce_loss，total_loss = diffusion_loss + λ * type_ce_loss
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def forward(self, batch, _return_noisy_frac=False):
+        """
+        _return_noisy_frac : 调试用，True 时额外返回 input_frac_coords（用于开训前检查 2）
+        """
+        batch_size = batch.num_graphs
+        times      = self.beta_scheduler.uniform_sample_t(batch_size, self.device)
+        time_emb   = self.time_embedding(times)
+
+        spectrum_cond = self.spectrum_encoder(
+            batch.xmu_xanes,
+            batch.chi1,
+            batch.feff_features,
+        )
+        condition = torch.cat([time_emb, spectrum_cond], dim=-1)
+
+        alphas_cumprod = self.beta_scheduler.alphas_cumprod[times]
+        beta           = self.beta_scheduler.betas[times]
+        c0 = torch.sqrt(alphas_cumprod)
+        c1 = torch.sqrt(1. - alphas_cumprod)
+
+        sigmas      = self.sigma_scheduler.sigmas[times]
+        sigmas_norm = self.sigma_scheduler.sigmas_norm[times]
+
+        lattices    = lattice_params_to_matrix_torch(batch.lengths, batch.angles)
+        frac_coords = batch.frac_coords
+
+        rand_l = torch.randn_like(lattices)
+        rand_x = torch.randn_like(frac_coords)
+
+        input_lattice = c0[:, None, None] * lattices + c1[:, None, None] * rand_l
+
+        sigmas_per_atom      = sigmas.repeat_interleave(batch.num_atoms)[:, None]
+        sigmas_norm_per_atom = sigmas_norm.repeat_interleave(batch.num_atoms)[:, None]
+
+        # ★★★ v3 核心改动：去掉 % 1.，保持坐标在 [-0.5, 0.5] 附近自然扩散 ★★★
+        input_frac_coords = frac_coords + sigmas_per_atom * rand_x
+
+        gt_atom_types_onehot = F.one_hot(
+            batch.atom_types - 1, num_classes=MAX_ATOMIC_NUM).float()
+        rand_t = torch.randn_like(gt_atom_types_onehot)
+        atom_type_probs = (
+            c0.repeat_interleave(batch.num_atoms)[:, None] * gt_atom_types_onehot
+            + c1.repeat_interleave(batch.num_atoms)[:, None] * rand_t)
+
+        if self.keep_coords:
+            input_frac_coords = frac_coords
+        if self.keep_lattice:
+            input_lattice = lattices
+
+        pred_l, pred_x, pred_t = self.decoder(
+            condition,
+            atom_type_probs, input_frac_coords, input_lattice,
+            batch.num_atoms, batch.batch)
+
+        tar_x = d_log_p_wrapped_normal(
+            sigmas_per_atom * rand_x, sigmas_per_atom) / torch.sqrt(sigmas_norm_per_atom)
+
+        loss_lattice = F.mse_loss(pred_l, rand_l)
+        loss_coord   = F.mse_loss(pred_x, tar_x)
+        loss_type    = F.mse_loss(pred_t, rand_t)
+
+        # ★ 密度正则损失
+        loss_density = self._density_loss(
+            input_frac_coords, pred_x, sigmas_per_atom, sigmas_norm_per_atom)
+
+        diffusion_loss = (self.hparams.cost_lattice * loss_lattice
+                          + self.hparams.cost_coord  * loss_coord
+                          + self.hparams.cost_type   * loss_type
+                          + self.cost_density        * loss_density)
+
+        # ── Exp3：TypeClassifier 交叉熵损失 ───────────────────────────
+        # type_logits: (B, 20, N_elem)
+        type_logits = self.type_classifier(spectrum_cond)
+
+        # 构建 type labels：把 batch 中每个样本的 atom_types 转成 class_index
+        # batch.atom_types: (N_total,) 原子序数；按 num_atoms 拆成 (B, 20)
+        _num_atoms  = batch.num_atoms                       # (B,) int tensor
+        _types_flat = batch.atom_types                      # (N_total,)
+        _labels_list = torch.split(_types_flat, _num_atoms.tolist())
+        _labels = torch.stack([t for t in _labels_list])    # (B, 20)，原子序数
+
+        # 原子序数 → class_index（用 vocab 映射）
+        _ci = torch.zeros_like(_labels)
+        for b in range(_labels.shape[0]):
+            for n in range(_labels.shape[1]):
+                z_str = str(_labels[b, n].item())
+                _ci[b, n] = self.elem_vocab.get(z_str, 0)  # OOV 归入 class 0
+
+        # 交叉熵：logits (B*20, N_elem) vs labels (B*20,)
+        _B, _N, _E = type_logits.shape
+        type_ce_loss = F.cross_entropy(
+            type_logits.view(_B * _N, _E),
+            _ci.view(_B * _N).to(type_logits.device),
+        )
+
+        # 合并总损失
+        lambda_type = getattr(self.hparams, 'lambda_type', 0.5)
+        total_loss  = diffusion_loss + lambda_type * type_ce_loss
+
+        output = {
+            'loss':         total_loss,      # 主 loss key 保持不变（Lightning 接口）
+            'loss_lattice': loss_lattice,
+            'loss_coord':   loss_coord,
+            'loss_type':    loss_type,
+            'loss_density': loss_density,
+            'diffusion_loss': diffusion_loss,
+            'type_ce_loss':   type_ce_loss,
+            'total_loss':     total_loss,
+        }
+        if _return_noisy_frac:
+            output['_input_frac_coords'] = input_frac_coords.detach()
+        return output
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # sample（推断）
+    # ★ v3 改动：
+    #   - x_T 先验改为 Uniform[-0.5, 0.5]（与训练分布一致）
+    #   - 内部步骤去掉 % 1. 折叠
+    #   - 最终最小镜像 clip 保留（处理轻微超界）
+    # ★ Exp3 改动：用 TypeClassifier 替换 decoder 的原子类型输出
+    # ─────────────────────────────────────────────────────────────────────────
+
+    @torch.no_grad()
+    def sample(self, batch, diff_ratio=1.0, step_lr=1e-5):
+        batch_size = batch.num_graphs
+
+        spectrum_cond = self.spectrum_encoder(
+            batch.xmu_xanes,
+            batch.chi1,
+            batch.feff_features,
+        )
+
+        l_T = torch.randn([batch_size, 3, 3]).to(self.device)
+        # ★★★ v3 改动：先验从 [0,1] 改为 [-0.5, 0.5]，与训练坐标系一致 ★★★
+        x_T = torch.rand([batch.num_nodes, 3]).to(self.device) - 0.5
+        t_T = torch.randn([batch.num_nodes, MAX_ATOMIC_NUM]).to(self.device)
+
+        if self.keep_coords:
+            x_T = batch.frac_coords
+        if self.keep_lattice:
+            l_T = lattice_params_to_matrix_torch(batch.lengths, batch.angles)
+
+        traj = {self.beta_scheduler.timesteps: {
+            'num_atoms':   batch.num_atoms,
+            'atom_types':  t_T,
+            'frac_coords': x_T,
+            'lattices':    l_T,
+        }}
+
+        for t in tqdm(range(self.beta_scheduler.timesteps, 0, -1)):
+            times    = torch.full((batch_size,), t, device=self.device)
+            time_emb = self.time_embedding(times)
+            condition = torch.cat([time_emb, spectrum_cond], dim=-1)
+
+            alphas         = self.beta_scheduler.alphas[t]
+            alphas_cumprod = self.beta_scheduler.alphas_cumprod[t]
+            sigmas         = self.beta_scheduler.sigmas[t]
+            sigma_x        = self.sigma_scheduler.sigmas[t]
+            sigma_norm     = self.sigma_scheduler.sigmas_norm[t]
+
+            c0 = 1.0 / torch.sqrt(alphas)
+            c1 = (1 - alphas) / torch.sqrt(1 - alphas_cumprod)
+
+            x_t = traj[t]['frac_coords']
+            l_t = traj[t]['lattices']
+            t_t = traj[t]['atom_types']
+
+            if self.keep_coords:
+                x_t = x_T
+            if self.keep_lattice:
+                l_t = l_T
+
+            rand_l = torch.randn_like(l_T) if t > 1 else torch.zeros_like(l_T)
+            rand_t = torch.randn_like(t_T) if t > 1 else torch.zeros_like(t_T)
+            rand_x = torch.randn_like(x_T) if t > 1 else torch.zeros_like(x_T)
+
+            step_size = step_lr * (sigma_x / self.sigma_scheduler.sigma_begin) ** 2
+            std_x     = torch.sqrt(2 * step_size)
+
+            pred_l, pred_x, pred_t = self.decoder(
+                condition, t_t, x_t, l_t, batch.num_atoms, batch.batch)
+            pred_x = pred_x * torch.sqrt(sigma_norm)
+
+            x_t_minus_05 = (x_t - step_size * pred_x + std_x * rand_x
+                            if not self.keep_coords else x_t)
+            l_t_minus_05 = l_t
+            t_t_minus_05 = t_t
+
+            rand_l = torch.randn_like(l_T) if t > 1 else torch.zeros_like(l_T)
+            rand_t = torch.randn_like(t_T) if t > 1 else torch.zeros_like(t_T)
+            rand_x = torch.randn_like(x_T) if t > 1 else torch.zeros_like(x_T)
+
+            adjacent_sigma_x = self.sigma_scheduler.sigmas[t - 1]
+            step_size = (sigma_x ** 2 - adjacent_sigma_x ** 2)
+            std_x = torch.sqrt(
+                (adjacent_sigma_x ** 2 * (sigma_x ** 2 - adjacent_sigma_x ** 2))
+                / (sigma_x ** 2))
+
+            pred_l, pred_x, pred_t = self.decoder(
+                condition, t_t_minus_05, x_t_minus_05, l_t_minus_05,
+                batch.num_atoms, batch.batch)
+            pred_x = pred_x * torch.sqrt(sigma_norm)
+
+            x_t_minus_1 = (x_t_minus_05 - step_size * pred_x + std_x * rand_x
+                           if not self.keep_coords else x_t)
+            l_t_minus_1 = (c0 * (l_t_minus_05 - c1 * pred_l) + sigmas * rand_l
+                           if not self.keep_lattice else l_t)
+            t_t_minus_1 = c0 * (t_t_minus_05 - c1 * pred_t) + sigmas * rand_t
+
+            # ★★★ v3 改动：用最小镜像折叠替代旧的 % 1. 折叠 ★★★
+            x_t_folded = x_t_minus_1 - torch.round(x_t_minus_1)
+            traj[t - 1] = {
+                'num_atoms':   batch.num_atoms,
+                'atom_types':  t_t_minus_1,
+                'frac_coords': x_t_folded,
+                'lattices':    l_t_minus_1,
+            }
+
+        # ★ 最终输出：最小镜像 clip，确保轻微超界的坐标也落在 [-0.5, 0.5]
+        final_frac    = traj[0]['frac_coords']
+        final_frac_mi = final_frac.clone()
+        final_frac_mi[final_frac_mi >  0.5] -= 1.0
+        final_frac_mi[final_frac_mi < -0.5] += 1.0
+
+        traj_stack = {
+            'num_atoms':  batch.num_atoms,
+            'atom_types': torch.stack([
+                traj[i]['atom_types']
+                for i in range(self.beta_scheduler.timesteps, -1, -1)
+            ]).argmax(dim=-1) + 1,
+            'all_frac_coords': torch.stack([
+                traj[i]['frac_coords']
+                for i in range(self.beta_scheduler.timesteps, -1, -1)
+            ]),
+            'all_lattices': torch.stack([
+                traj[i]['lattices']
+                for i in range(self.beta_scheduler.timesteps, -1, -1)
+            ]),
+        }
+
+        traj[0] = {**traj[0], 'frac_coords': final_frac_mi}
+
+        # ── Exp3：用 TypeClassifier 的预测替换 decoder 类型输出 ────────
+        # spectrum_cond 已在函数顶部计算，直接复用，无需重新过 encoder
+        _type_logits = self.type_classifier(spectrum_cond)  # (B, 20, N_elem)
+        _pred_class  = _type_logits.argmax(dim=-1)          # (B, 20)
+
+        # class_index → 原子序数（反向映射）
+        _inv_vocab = {v: int(k) for k, v in self.elem_vocab.items()}
+        _num_atoms = batch.num_atoms.tolist()
+        pred_atom_types_list = []
+        for b in range(_pred_class.shape[0]):
+            zs = [_inv_vocab.get(_pred_class[b, n].item(), 8)  # OOV 归 O (Z=8)
+                  for n in range(_pred_class.shape[1])]
+            pred_atom_types_list.append(torch.tensor(zs, dtype=torch.long))
+        pred_atom_types = torch.cat(pred_atom_types_list)  # (N_total,)
+
+        # 用 TypeClassifier 预测替换 traj[0] 中来自 decoder 的原子类型
+        traj[0] = {**traj[0], 'atom_types': pred_atom_types}
+
+        return traj[0], traj_stack
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Lightning hooks
+    # ─────────────────────────────────────────────────────────────────────────
+
+    def training_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
+        output_dict = self(batch)
+        self.log_dict({
+            'train_loss':      output_dict['loss'],
+            'lattice_loss':    output_dict['loss_lattice'],
+            'coord_loss':      output_dict['loss_coord'],
+            'type_loss':       output_dict['loss_type'],
+            'density_loss':    output_dict['loss_density'],
+            'type_ce_loss':    output_dict['type_ce_loss'],
+            'total_loss':      output_dict['total_loss'],
+        }, on_step=True, on_epoch=True, prog_bar=True)
+        if output_dict['loss'].isnan():
+            return None
+        return output_dict['loss']
+
+    def validation_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
+        output_dict = self(batch)
+        log_dict, loss = self.compute_stats(output_dict, prefix='val')
+        self.log_dict(log_dict, on_step=False, on_epoch=True, prog_bar=True)
+        return loss
+
+    def test_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
+        output_dict = self(batch)
+        log_dict, loss = self.compute_stats(output_dict, prefix='test')
+        self.log_dict(log_dict)
+        return loss
+
+    def compute_stats(self, output_dict, prefix):
+        log_dict = {
+            f'{prefix}_loss':          output_dict['loss'],
+            f'{prefix}_lattice_loss':  output_dict['loss_lattice'],
+            f'{prefix}_coord_loss':    output_dict['loss_coord'],
+            f'{prefix}_type_loss':     output_dict['loss_type'],
+            f'{prefix}_density_loss':  output_dict['loss_density'],
+            f'{prefix}_type_ce_loss':  output_dict['type_ce_loss'],
+            f'{prefix}_total_loss':    output_dict['total_loss'],
+        }
+        return log_dict, output_dict['loss']
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# 自验证（仅在直接运行时执行，无需真实数据）
+# ─────────────────────────────────────────────────────────────────────────────
+
+if __name__ == '__main__':
+    import json, os, types, sys
+
+    print("=" * 60)
+    print("Step 3c 自验证")
+    print("=" * 60)
+
+    # ──────────────────────────────────────────────────────────────
+    # 1. 直接测试 TypeClassifier（不需要完整模型）
+    # ──────────────────────────────────────────────────────────────
+    # 从上传的 elem_vocab.json 路径读取词表
+    _vocab_path = os.path.join(os.path.dirname(__file__), '..', '..', 'elem_vocab.json')
+    if not os.path.exists(_vocab_path):
+        # fallback: 使用内联的精简词表（与上传文件一致，83 个类别）
+        _vocab_inline = {str(z): i for i, z in enumerate([
+            8,26,3,9,15,12,16,14,5,7,13,38,1,11,27,25,6,34,20,22,
+            56,33,29,23,28,32,24,57,51,19,31,17,30,37,50,41,42,39,40,83,
+            52,65,74,60,66,62,73,55,72,59,68,21,45,67,58,35,63,82,53,92,
+            47,69,44,81,71,78,77,64,4,48,46,75,90,49,43,80,76,70,79,93,
+            91,94,54
+        ])}
+        _vocab = _vocab_inline
+    else:
+        with open(_vocab_path) as f:
+            _vocab = json.load(f)
+
+    N_ELEM       = len(_vocab)
+    N_NEIGHBORS  = 20
+    LATENT_DIM   = 256
+    B            = 4     # fake batch size
+    N_TOTAL      = B * N_NEIGHBORS  # 80 atoms total
+
+    # 检查 1：TypeClassifier 参数量
+    tc = TypeClassifier(latent_dim=LATENT_DIM, n_neighbors=N_NEIGHBORS, n_elem=N_ELEM)
+    n_params = sum(p.numel() for p in tc.parameters())
+    # NOTE: task doc estimated N_ELEM ≈ 40-60，实际词表 83 个元素 → 参数量约 559K
+    # 上限调整至 600K，架构与任务文档完全一致（三层 MLP 固定），超出估计是词表更大所致。
+    assert 200_000 <= n_params <= 600_000, f"参数量异常: {n_params}"
+    print(f"✅ 检查1 TypeClassifier 参数量: {n_params:,}")
+
+    # 检查 2：TypeClassifier forward 跑通
+    fake_latent = torch.randn(B, LATENT_DIM)
+    type_logits = tc(fake_latent)
+    assert type_logits.shape == (B, N_NEIGHBORS, N_ELEM), \
+        f"logits shape 异常: {type_logits.shape}"
+    assert not torch.isnan(type_logits).any(), "type_logits 含 NaN"
+    print(f"✅ TypeClassifier forward shape: {tuple(type_logits.shape)}")
+
+    # 检查 2b：cross_entropy 计算
+    # 构造 fake labels (class indices in [0, N_ELEM))
+    fake_labels = torch.randint(0, N_ELEM, (B, N_NEIGHBORS))
+    _B, _N, _E = type_logits.shape
+    type_ce_loss = F.cross_entropy(
+        type_logits.view(_B * _N, _E),
+        fake_labels.view(_B * _N),
+    )
+    assert not torch.isnan(type_ce_loss), "type_ce_loss 是 NaN！"
+    print(f"✅ type_ce_loss={type_ce_loss.item():.4f}  (fake batch, loss 非 NaN)")
+
+    # 检查 3：fake diffusion_loss + total_loss
+    diffusion_loss = torch.tensor(0.8)   # 模拟合理范围的 diffusion loss
+    lambda_type    = 0.5
+    total_loss     = diffusion_loss + lambda_type * type_ce_loss
+    assert not torch.isnan(diffusion_loss), "diffusion_loss 是 NaN！"
+    assert not torch.isnan(total_loss),     "total_loss 是 NaN！"
+    print(f"✅ diffusion_loss={diffusion_loss.item():.4f}  "
+          f"type_ce_loss={type_ce_loss.item():.4f}  "
+          f"total_loss={total_loss.item():.4f}")
+
+    # 检查 4：sample() 中的 class_index → 原子序数反向映射
+    _inv_vocab = {v: int(k) for k, v in _vocab.items()}
+    fake_pred_class = torch.randint(0, N_ELEM, (B, N_NEIGHBORS))
+    pred_atom_types_list = []
+    for b in range(B):
+        zs = [_inv_vocab.get(fake_pred_class[b, n].item(), 8)
+              for n in range(N_NEIGHBORS)]
+        pred_atom_types_list.append(torch.tensor(zs, dtype=torch.long))
+    pred_atom_types = torch.cat(pred_atom_types_list)   # (N_total,)
+
+    assert pred_atom_types.min() >= 1 and pred_atom_types.max() <= 94, \
+        f"原子序数超界: [{pred_atom_types.min()}, {pred_atom_types.max()}]"
+    print(f"✅ sample() 返回原子序数范围: "
+          f"[{pred_atom_types.min().item()}, {pred_atom_types.max().item()}]")
+
+    print()
+    print("=" * 60)
+    print("所有自验证通过 ✅")
+    print("=" * 60)

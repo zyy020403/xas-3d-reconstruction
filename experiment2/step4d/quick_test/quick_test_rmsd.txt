@@ -1,0 +1,7 @@
+Step4d Quick Test Report
+Epochs=30, L=6.0Å
+N_samples=112
+RMSD=1.5213 Å
+random_baseline=2.32 Å
+ratio=65.47%
+✅✅ RMSD < 1.8 Å，方向正确，可以开 500epoch 正式训练

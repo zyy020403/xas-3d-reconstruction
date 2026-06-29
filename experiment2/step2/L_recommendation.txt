@@ -1,0 +1,15 @@
+# Step 2.5 虚拟晶格边长推荐
+# 生成时间：2026-04-09 20:42:11.122185
+
+L = 12  # 单位 Å，Step3 Dataset 使用此值
+
+# 统计依据
+n_valid      = 499
+n_skipped    = 1
+d20_mean     = 4.0194
+d20_median   = 3.9567
+d20_99th     = 5.1434
+dmax_99th    = 5.1434
+L_raw        = 10.2867  # 2 x dmax_99th
+L_rec        = 11       # ceil(L_raw)
+L_final      = 12      # Step3 使用值

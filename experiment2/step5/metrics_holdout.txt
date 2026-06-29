@@ -1,0 +1,60 @@
+Step5 Holdout Metrics Report
+坐标系：L=6.0，min-image [-0.5,0.5]，匹配/RMSD 使用最小镜像周期边界距离
+checkpoint：experiment2/step4d/checkpoints/epoch=249-val_loss=0.8554.ckpt
+============================================================
+
+=== Holdout Set Metrics (Step5 Holdout, min-image Hungarian matching) ===
+N_samples        : 787
+RMSD (Å)         : mean=1.4669  median=1.4623  std=0.0974
+Type Accuracy    : mean=0.2409  median=0.2000
+
+原子密度参考（eval_cutoff 内，最小镜像到 Fe 原点）：
+  pred_in_cutoff : mean=17.52 / 20
+  true_in_cutoff : mean=18.99 / 20
+
+参考（Step4d val/test）：RMSD=1.47Å  TypeAcc=0.249  pred_in_cutoff≈17.47/20
+
+── 子群：eval_cutoff ──
+  < 3.0 Å       N=    0  RMSD=nan  TypeAcc=nan
+  3.0–4.0 Å     N=  412  RMSD=1.4660  TypeAcc=0.2674
+
+── 子群：n_true_in（eval_cutoff 内真实原子数）──
+  ≤ 8（第一壳层）             N=    3  RMSD=1.6063  TypeAcc=0.2167
+  9–14（第二壳层）            N=   31  RMSD=1.4914  TypeAcc=0.2339
+  15–20（第三壳层）           N=  753  RMSD=1.4653  TypeAcc=0.2412
+
+── Holdout 验收判断（STEP5_HANDOFF.md 标准）──
+  RMSD         : 1.4669 Å  ✅ 正常 [1.4-2.0]
+  Type Accuracy: 0.2409  ✅ 正常 [0.22-0.28]
+  pred_in_cutoff: 17.52/20  ✅ 正常 [15-20]
+
+随机基线 RMSD ≈ 2.32 Å（L=6.0，[-L/2,L/2] 均匀分布期望）
+✅✅ RMSD < 2.0 Å，Holdout 验收通过！模型泛化性良好。
+
+============================================================
+
+## Step5 完成报告
+
+**执行内容**：Holdout 盲测检验
+
+**Holdout 样本数**：787（原始 IDs：787）
+
+**评估结果**：
+  RMSD（holdout）：1.4669 Å
+  Type Accuracy（holdout）：0.2409
+  pred_in_cutoff（holdout）：17.52 / 20
+  true_in_cutoff（holdout）：18.99 / 20
+
+**与 val/test 对比**：
+  RMSD：val=1.47Å，test=1.47Å，holdout=1.4669Å
+  Type Acc：val=0.249，holdout=0.2409
+
+**输出文件**：
+  predictions_holdout.pt ✅
+  metrics_holdout.txt ✅
+
+**异常/发现**：
+  无异常，Holdout 结果与 val/test 接近，泛化性良好。
+
+**需要 Main Agent 2 决策的问题**：
+  无。

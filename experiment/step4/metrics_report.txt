@@ -1,0 +1,79 @@
+=================================================================
+  Step 4 评估指标报告（v5 纯晶格参数版）
+
+  Lattice Match Rate = lengths 相对误差 < 30%
+                       AND angles 绝对误差 < 10°
+  （StructureMatcher 晶格步骤等价，是 match_rate 的上界）
+  Bond Violation Rate = N/A（超胞 get_all_neighbors 太慢，
+                        将在 Step 5 针对原胞单独计算）
+=================================================================
+
+────────────────────────────────────────────────────────────
+  Val 集
+────────────────────────────────────────────────────────────
+总样本数                      : 708
+预测结构无效（负/NaN晶格）    : 0
+Pred lengths > 100 Å          : 128 (18.1%)  ← 扩散未收敛 outlier，需关注
+Lattice Match Rate (上界)     : 17.2%  (122/708)
+Mean Length RMSE              : 286.8934 Å
+Mean Angle MAE                : 22.168 °
+Bond Viol Rate                : N/A（见上方说明）
+
+  [is_ionic 分析]
+  纯共价 (is_ionic=False): LatticeMatch=17.6%  LenRMSE=280.590 Å  AngleMAE=22.04°  (N=683)
+  含 ionic (is_ionic=True): LatticeMatch=8.0%  LenRMSE=459.092 Å  AngleMAE=25.64°  (N=25)
+
+  [位点数分析] 列不可用
+
+  [质量分级分析]
+  Quality A: LatticeMatch=17.1%  LenRMSE=289.967 Å  AngleMAE=22.21°  (N=527)
+  Quality B: LatticeMatch=12.0%  LenRMSE=251.269 Å  AngleMAE=27.24°  (N=50)
+  Quality C: LatticeMatch=19.8%  LenRMSE=288.125 Å  AngleMAE=20.07°  (N=131)
+
+  [元素种类分析]
+  含 Fe 且纯共价: LatticeMatch=17.9%  LenRMSE=280.149 Å  AngleMAE=21.73°  (N=619)
+  含 Fe 且含 ionic: LatticeMatch=20.0%  LenRMSE=684.254 Å  AngleMAE=51.18°  (N=5)
+
+  [预测结构健康检查]
+  Length RMSE > 5 Å            : 229
+  Angle MAE > 30°              : 174
+  pred_len_mean (avg)          : 256.59 Å
+  gt_len_mean   (avg)          : 11.07 Å
+
+────────────────────────────────────────────────────────────
+  Test 集
+────────────────────────────────────────────────────────────
+总样本数                      : 790
+预测结构无效（负/NaN晶格）    : 0
+Pred lengths > 100 Å          : 154 (19.5%)  ← 扩散未收敛 outlier，需关注
+Lattice Match Rate (上界)     : 16.7%  (132/790)
+Mean Length RMSE              : 351.8415 Å
+Mean Angle MAE                : 23.913 °
+Bond Viol Rate                : N/A（见上方说明）
+
+  [is_ionic 分析]
+  纯共价 (is_ionic=False): LatticeMatch=16.8%  LenRMSE=354.204 Å  AngleMAE=24.06°  (N=757)
+  含 ionic (is_ionic=True): LatticeMatch=15.2%  LenRMSE=297.637 Å  AngleMAE=20.58°  (N=33)
+
+  [位点数分析] 列不可用
+
+  [质量分级分析]
+  Quality A: LatticeMatch=15.0%  LenRMSE=411.323 Å  AngleMAE=24.52°  (N=560)
+  Quality B: LatticeMatch=21.4%  LenRMSE=211.528 Å  AngleMAE=22.19°  (N=56)
+  Quality C: LatticeMatch=20.7%  LenRMSE=205.565 Å  AngleMAE=22.51°  (N=174)
+
+  [元素种类分析]
+  含 Fe 且纯共价: LatticeMatch=16.9%  LenRMSE=373.908 Å  AngleMAE=24.56°  (N=669)
+  含 Fe 且含 ionic: LatticeMatch=14.3%  LenRMSE=180.826 Å  AngleMAE=18.90°  (N=7)
+
+  [预测结构健康检查]
+  Length RMSE > 5 Å            : 249
+  Angle MAE > 30°              : 209
+  pred_len_mean (avg)          : 308.97 Å
+  gt_len_mean   (avg)          : 11.11 Å
+
+=================================================================
+  后续建议：
+  1. Fine-tune (Step 4.3) 完成后重新采样，用原胞输出计算 StructureMatcher
+  2. 键长违规率在 Step 5 盲测时对原胞结构计算
+=================================================================

@@ -1,0 +1,30 @@
+============================================================
+Step 4f — 修复 TypeClassifier 输入并继续训练
+============================================================
+旧 checkpoint：C:\Users\T-Cat\Desktop\DiffCSP-main\experiment3\step4e\checkpoints\epoch=419-val_coord_loss=0.7249.ckpt
+输出目录：C:\Users\T-Cat\Desktop\DiffCSP-main\experiment3\step4f
+
+[1/5] 加载旧 checkpoint state_dict ...
+  旧 TypeClassifier 第一层 weight shape：torch.Size([256, 256])
+
+[2/5] 实例化 Step4f 模型（TypeClassifier latent_dim=329）...
+  新模型 TypeClassifier 参数量：577,916
+  新 TypeClassifier 第一层 weight shape：torch.Size([256, 329])
+  ✅ 新模型架构验证通过
+
+[3/5] 部分加载旧 checkpoint 权重（跳过形状不兼容层）...
+  跳过以下 key（形状不匹配或不存在）：
+    ⚠️  type_classifier.mlp.0.weight  old=torch.Size([256, 256]) → new=torch.Size([256, 329])
+  加载完成：105 keys 成功，1 missing，0 unexpected
+  TypeClassifier 形状不兼容层保持随机初始化（从头学习新的 329 维输入）
+  所有其他层（SpectrumEncoder、CSPNet、坐标扩散）权重完整继承
+
+[4/5] 准备 DataLoader ...
+  Train: 7595 样本 | Val: 1627 样本
+
+[5/5] 启动训练（max_epochs=600，从 epoch 420 继续）...
+
+  训练开始 >>>
+
+  [早期监控 epoch=20] val_type_acc = 0.5917795300483704
+  ✅ val_type_acc > 0.30，修复有效！继续训练

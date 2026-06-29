@@ -1,0 +1,14 @@
+Step4c Test Full Report
+============================================================
+Random baseline RMSD : 4.6476 Å
+RMSD_0  (epoch  0)   : 3.7622 Å  (n=80)
+RMSD_30 (epoch 30)   : 3.6561 Å  (n=80)
+Improvement ratio    : 2.8%
+Best val_loss        : 0.9046
+Elapsed              : 82.8 min
+Verdict              : MARGINAL
+
+Check 1 (dataset range)    : PASS
+Check 2 (forward no %1.)   : PASS
+Check 3 (loss finite)      : PASS
+Check 4 (sample range)     : PASS

@@ -1,0 +1,28 @@
+﻿# === 大数据目录（放 Zenodo，不传 GitHub）===
+experiment4/data/
+site_dataset_Fe_only_oxide_one_site/
+**/MP_all_EXAFS_only_chi_csv/
+
+# === 模型权重 & 大数据文件 ===
+*.ckpt
+*.pt
+*.pth
+*.pkl
+*.npy
+*.npz
+*.h5
+*.hdf5
+
+# === Python 缓存 / 虚拟环境 ===
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+.ipynb_checkpoints/
+
+# === 系统 / 日志 ===
+.DS_Store
+*.log
+wandb/
+lightning_logs/

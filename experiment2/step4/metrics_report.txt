@@ -1,0 +1,38 @@
+
+=== Val Set Metrics ===
+N_samples     : 1162
+RMSD (Å)      : mean=1.4686  median=1.4651  std=0.3812
+Type Accuracy : mean=0.2521  median=0.1667
+N_atoms_error : MAE=13.1110
+Bond Viol Rate: N/A（CSV 未找到）
+
+── 子群：eval_cutoff ──
+  < 3.0 Å       N=    0  RMSD=nan  TypeAcc=nan
+  3.0–4.0 Å     N=  617  RMSD=1.3533  TypeAcc=0.2912
+
+── 子群：n_true（评估截断内原子数）──
+  ≤ 8（第一壳层）             N=   47  RMSD=1.8702  TypeAcc=0.1426
+  9–14（第二壳层）            N=  285  RMSD=1.6061  TypeAcc=0.1962
+  15–20（第三壳层）           N=  830  RMSD=1.3986  TypeAcc=0.2775
+
+参考：随机基线 RMSD ≈ 4.65 Å（L=12 均匀分布期望）
+✅ 模型显著优于随机基线（RMSD < 70% 基线）
+
+=== Test Set Metrics ===
+N_samples     : 1178
+RMSD (Å)      : mean=1.4486  median=1.4417  std=0.3707
+Type Accuracy : mean=0.2440  median=0.1381
+N_atoms_error : MAE=13.2377
+Bond Viol Rate: N/A（CSV 未找到）
+
+── 子群：eval_cutoff ──
+  < 3.0 Å       N=    0  RMSD=nan  TypeAcc=nan
+  3.0–4.0 Å     N=  608  RMSD=1.3380  TypeAcc=0.2765
+
+── 子群：n_true（评估截断内原子数）──
+  ≤ 8（第一壳层）             N=   45  RMSD=1.9597  TypeAcc=0.1319
+  9–14（第二壳层）            N=  284  RMSD=1.5653  TypeAcc=0.2027
+  15–20（第三壳层）           N=  849  RMSD=1.3825  TypeAcc=0.2637
+
+参考：随机基线 RMSD ≈ 4.65 Å（L=12 均匀分布期望）
+✅ 模型显著优于随机基线（RMSD < 70% 基线）

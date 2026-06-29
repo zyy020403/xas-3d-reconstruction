@@ -1,0 +1,80 @@
+Step5b Metrics Report — Experiment 3
+L=6.0 Å，坐标系 [-0.5, 0.5]，最小镜像匈牙利匹配
+新增：Type Accuracy Top-3，壳层分组统计
+============================================================
+
+=== Val Set Metrics (Step5b Exp3, min-image Hungarian, L=6.0Å) ===
+N_samples        : 1624
+
+── 坐标（RMSD）──
+RMSD (Å)         : mean=1.5284  median=1.5212  std=0.1115  ✅ (目标 ≤ 1.6Å)
+
+── 原子类型 ──
+Type Acc Top-1   : mean=0.2127  median=0.2000  ❌ (目标 ≥ 0.40)
+Type Acc Top-3   : mean=0.4192  N_valid=1624  ❌ (目标 ≥ 0.65)
+
+── 原子密度（eval_cutoff 内） ──
+pred_in_cutoff   : mean=17.53 / 20  ✅ (目标 ≥ 15)
+true_in_cutoff   : mean=19.21 / 20
+
+── 子群：eval_cutoff ──
+  < 3.0 Å       N=    2  RMSD=1.4043  TypeAcc=0.0000
+  3.0–4.0 Å     N=  925  RMSD=1.5235  TypeAcc=0.2496
+
+── 子群：n_true_in（eval_cutoff 内真实原子数）──
+  ≤ 8                   N=    5  RMSD=1.6778  TypeAcc=0.1600
+  9–14                  N=   36  RMSD=1.5786  TypeAcc=0.1611
+  15–20                 N= 1583  RMSD=1.5268  TypeAcc=0.2140
+
+── 壳层分组统计（按 true 原子到 Fe 原点距离，匹配对级别）──
+  第一壳层 (≤2.5Å)            N_pairs= 9828  RMSD=1.4999  TypeAcc_Top1=0.2963  TypeAcc_Top3=0.5541
+  第二壳层 (2.5-3.5Å)         N_pairs=16935  RMSD=1.5340  TypeAcc_Top1=0.1598  TypeAcc_Top3=0.3346
+  第三壳层 (3.5-4.0Å)         N_pairs= 4784  RMSD=1.5691  TypeAcc_Top1=0.2266  TypeAcc_Top3=0.4377
+
+随机基线 RMSD ≈ 2.32 Å（[-L/2, L/2] 均匀分布，L=6.0）
+
+Exp3 验收标准：
+  RMSD ≤ 1.6 Å        : ✅
+  Type Acc Top-1 ≥ 0.40: ❌
+  Type Acc Top-3 ≥ 0.65: ❌
+  pred_in_cutoff ≥ 15  : ✅
+
+❌ 存在未达标指标（见上）
+
+=== Test Set Metrics (Step5b Exp3, min-image Hungarian, L=6.0Å) ===
+N_samples        : 1626
+
+── 坐标（RMSD）──
+RMSD (Å)         : mean=1.5330  median=1.5258  std=0.1123  ✅ (目标 ≤ 1.6Å)
+
+── 原子类型 ──
+Type Acc Top-1   : mean=0.2135  median=0.2000  ❌ (目标 ≥ 0.40)
+Type Acc Top-3   : mean=0.4187  N_valid=1626  ❌ (目标 ≥ 0.65)
+
+── 原子密度（eval_cutoff 内） ──
+pred_in_cutoff   : mean=17.51 / 20  ✅ (目标 ≥ 15)
+true_in_cutoff   : mean=19.17 / 20
+
+── 子群：eval_cutoff ──
+  < 3.0 Å       N=    1  RMSD=1.3558  TypeAcc=0.0000
+  3.0–4.0 Å     N=  902  RMSD=1.5298  TypeAcc=0.2451
+
+── 子群：n_true_in（eval_cutoff 内真实原子数）──
+  ≤ 8                   N=    3  RMSD=1.7315  TypeAcc=0.2167
+  9–14                  N=   47  RMSD=1.5261  TypeAcc=0.1553
+  15–20                 N= 1576  RMSD=1.5328  TypeAcc=0.2152
+
+── 壳层分组统计（按 true 原子到 Fe 原点距离，匹配对级别）──
+  第一壳层 (≤2.5Å)            N_pairs= 9810  RMSD=1.5009  TypeAcc_Top1=0.2991  TypeAcc_Top3=0.5546
+  第二壳层 (2.5-3.5Å)         N_pairs=16885  RMSD=1.5460  TypeAcc_Top1=0.1629  TypeAcc_Top3=0.3370
+  第三壳层 (3.5-4.0Å)         N_pairs= 4787  RMSD=1.5637  TypeAcc_Top1=0.2137  TypeAcc_Top3=0.4280
+
+随机基线 RMSD ≈ 2.32 Å（[-L/2, L/2] 均匀分布，L=6.0）
+
+Exp3 验收标准：
+  RMSD ≤ 1.6 Å        : ✅
+  Type Acc Top-1 ≥ 0.40: ❌
+  Type Acc Top-3 ≥ 0.65: ❌
+  pred_in_cutoff ≥ 15  : ✅
+
+❌ 存在未达标指标（见上）

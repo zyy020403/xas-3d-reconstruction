@@ -1,0 +1,1 @@
+C:\Users\T-Cat\Desktop\DiffCSP-main\experiment2\step4c\test_checkpoints\test-ep29-vl0.9046.ckpt

@@ -1,0 +1,46 @@
+Step4c Metrics Report
+Coordinate system: [-0.5, 0.5] (dataset v5 + diffusion v3)
+Matching: min-image Hungarian
+============================================================
+
+=== Val Set Metrics (Step4c, [-0.5,0.5] coordinate system) ===
+N_samples        : 1619
+RMSD (A)         : mean=4.1968  median=4.2489  std=0.7026
+Type Accuracy    : mean=0.2766  median=0.2500
+
+pred_in_cutoff   : mean=2.77 / 20
+true_in_cutoff   : mean=16.96 / 20
+
+-- Subgroup: eval_cutoff --
+  < 3.0 A       N=    2  RMSD=4.3128  TypeAcc=0.0000
+  3.0-4.0 A     N=  925  RMSD=4.3207  TypeAcc=0.3018
+
+-- Subgroup: n_true_in --
+  <=8                   N=   54  RMSD=3.6605  TypeAcc=0.1481
+  9-14                  N=  362  RMSD=4.0231  TypeAcc=0.2101
+  15-20                 N= 1203  RMSD=4.2732  TypeAcc=0.3024
+
+Random baseline RMSD ~ 4.65 A
+Target: RMSD < 2.0 A, pred_in_cutoff ~ true_in_cutoff
+FAIL: Model not meaningfully better than random baseline
+
+=== Test Set Metrics (Step4c, [-0.5,0.5] coordinate system) ===
+N_samples        : 1620
+RMSD (A)         : mean=4.2188  median=4.2758  std=0.6898
+Type Accuracy    : mean=0.2678  median=0.2500
+
+pred_in_cutoff   : mean=2.70 / 20
+true_in_cutoff   : mean=16.99 / 20
+
+-- Subgroup: eval_cutoff --
+  < 3.0 A       N=    1  RMSD=5.0464  TypeAcc=0.0000
+  3.0-4.0 A     N=  902  RMSD=4.3382  TypeAcc=0.2862
+
+-- Subgroup: n_true_in --
+  <=8                   N=   51  RMSD=3.6096  TypeAcc=0.1255
+  9-14                  N=  363  RMSD=3.9999  TypeAcc=0.2251
+  15-20                 N= 1206  RMSD=4.3105  TypeAcc=0.2867
+
+Random baseline RMSD ~ 4.65 A
+Target: RMSD < 2.0 A, pred_in_cutoff ~ true_in_cutoff
+FAIL: Model not meaningfully better than random baseline

@@ -1,0 +1,73 @@
+--- /home/claude/exp5/code/step3/xas_local_dataset_v2.py.bak_exp4	2026-04-27 16:11:44.000000000 +0000
++++ /home/claude/exp5/code/step3/xas_local_dataset_v2.py	2026-04-27 16:12:43.000000000 +0000
+@@ -1,10 +1,12 @@
+ """
+ XasLocalDatasetV2: Exp4 Step 3 Dataset for diffusion training.
++                   Exp5 SA1 patch: adds `center_element_Z` field for center-element
++                   conditioning embedding lookup (EXP5_STEP1_HANDOFF §2.2 row 1).
+ 
+ Returns local representation: center atom + N_NEIGHBORS=20 nearest neighbors,
+ embedded in a virtual lattice of edge L_VIRTUAL=6.0 Å (HANDOFF §4.4 immutable).
+ 
+-Per-sample dict schema (HANDOFF §6.4):
++Per-sample dict schema (HANDOFF §6.4 + Exp5 §2.2 row 1):
+     xmu                      Tensor (150,)  float32   Step 2 preprocessed μ(E)
+     chi1                     Tensor (200,)  float32   Step 2 preprocessed k·χ(k)
+     feff                     Tensor (74,)   float32   scaler.transform applied
+@@ -13,6 +15,10 @@
+     sample_name              str
+     mp_id                    str
+     center_element           str
++    center_element_Z         int                      Exp5 SA1: Z of center element,
++                                                      ∈ [2, 94] empirically (88 elems);
++                                                      collated → (B,) LongTensor for
++                                                      nn.Embedding(95, 16) lookup
+     eval_cutoff              float                    Step 5 audit (scalar)
+     eval_cutoff_fallback     bool                     Step 5 audit
+     n_center_sites           int                      Step 5 audit
+@@ -128,11 +134,28 @@
+             self.shells = pickle.load(f)
+ 
+         # ---- pymatgen lazy import (fail-fast at init, not per-getitem) ----
+-        from pymatgen.core import Structure
++        from pymatgen.core import Structure, Element
+         from pymatgen.symmetry.analyzer import SpacegroupAnalyzer
+         self._Structure = Structure
+         self._SGA = SpacegroupAnalyzer
+ 
++        # ---- Exp5 SA1: center_element symbol → Z lookup table -----------
++        # Built once from the split's center_element column. Used in __getitem__
++        # to populate `center_element_Z` field for both fast (cache) and slow
++        # (live POSCAR) paths — avoids per-call pymatgen Element construction.
++        # Empirically max(Z) = 94 (Pu) across full 88-element pool; sentinel 0
++        # is reserved for padding. SpectrumEncoder needs nn.Embedding(95, 16).
++        unique_elems = self.samples["center_element"].unique()
++        self._symbol_to_Z: dict[str, int] = {
++            sym: int(Element(sym).Z) for sym in unique_elems
++        }
++        if self._symbol_to_Z:
++            zs = list(self._symbol_to_Z.values())
++            print(
++                f"[XasLocalDatasetV2] center_element_Z lookup built: "
++                f"{len(unique_elems)} elements, Z ∈ [{min(zs)}, {max(zs)}]"
++            )
++
+         # ---- Init A defensive: first 5 samples, all 4 sources resolve ----
+         feff_keys = set(self.feff_raw.index)
+         shell_keys = set(self.shells.keys())
+@@ -265,6 +288,7 @@
+                 "sample_name": sname,
+                 "mp_id": mp_id,
+                 "center_element": center_elem,
++                "center_element_Z": self._symbol_to_Z[center_elem],   # Exp5 SA1
+                 "eval_cutoff": float(shell_meta["eval_cutoff"]),
+                 "eval_cutoff_fallback": bool(shell_meta.get("eval_cutoff_fallback", False)),
+                 "n_center_sites": int(shell_meta["n_center_sites"]),
+@@ -342,6 +366,7 @@
+             "sample_name": sname,
+             "mp_id": mp_id,
+             "center_element": center_elem,
++            "center_element_Z": self._symbol_to_Z[center_elem],   # Exp5 SA1
+             "eval_cutoff": eval_cutoff,
+             "eval_cutoff_fallback": eval_cutoff_fallback,
+             "n_center_sites": n_center_sites,

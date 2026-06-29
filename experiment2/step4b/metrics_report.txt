@@ -1,0 +1,49 @@
+Step4b Metrics Report
+坐标系：Dataset v6 [0,1] + 评估无最小镜像折叠
+============================================================
+
+=== Val Set Metrics (Step4b, v4, full 20-atom matching, no min-image fold) ===
+N_samples        : 1624
+RMSD (Å)         : mean=11.6193  median=11.6016  std=1.8077
+Type Accuracy    : mean=0.2623  median=0.2500
+
+原子密度参考（eval_cutoff 内，最小镜像距离）：
+  pred_in_cutoff : mean=2.89 / 20
+  true_in_cutoff : mean=17.12 / 20
+  （两者接近说明模型原子密度分布合理，验收要求 pred ≈ true ≈ 17/20）
+
+── 子群：eval_cutoff ──
+  < 3.0 Å       N=    2  RMSD=11.8274  TypeAcc=0.0000
+  3.0–4.0 Å     N=  925  RMSD=11.7687  TypeAcc=0.2843
+
+── 子群：n_true_in（eval_cutoff 内真实原子数）──
+  ≤ 8（第一壳层）             N=   59  RMSD=11.0973  TypeAcc=0.0983
+  9–14（第二壳层）            N=  359  RMSD=11.2771  TypeAcc=0.2089
+  15–20（第三壳层）           N= 1206  RMSD=11.7468  TypeAcc=0.2862
+
+参考：随机基线 RMSD ≈ 4.65 Å（L=12 均匀分布期望）
+Step4b 验收标准：RMSD < 2.0 Å，pred_in_cutoff ≈ true_in_cutoff
+❌ 模型未有效优于随机基线，需汇报 Main Agent 2
+
+=== Test Set Metrics (Step4b, v4, full 20-atom matching, no min-image fold) ===
+N_samples        : 1626
+RMSD (Å)         : mean=11.6469  median=11.6125  std=1.8939
+Type Accuracy    : mean=0.2560  median=0.2500
+
+原子密度参考（eval_cutoff 内，最小镜像距离）：
+  pred_in_cutoff : mean=2.66 / 20
+  true_in_cutoff : mean=17.13 / 20
+  （两者接近说明模型原子密度分布合理，验收要求 pred ≈ true ≈ 17/20）
+
+── 子群：eval_cutoff ──
+  < 3.0 Å       N=    1  RMSD=8.0327  TypeAcc=0.0000
+  3.0–4.0 Å     N=  902  RMSD=11.8134  TypeAcc=0.2775
+
+── 子群：n_true_in（eval_cutoff 内真实原子数）──
+  ≤ 8（第一壳层）             N=   57  RMSD=10.9470  TypeAcc=0.0895
+  9–14（第二壳层）            N=  353  RMSD=11.2491  TypeAcc=0.2160
+  15–20（第三壳层）           N= 1216  RMSD=11.7952  TypeAcc=0.2754
+
+参考：随机基线 RMSD ≈ 4.65 Å（L=12 均匀分布期望）
+Step4b 验收标准：RMSD < 2.0 Å，pred_in_cutoff ≈ true_in_cutoff
+❌ 模型未有效优于随机基线，需汇报 Main Agent 2

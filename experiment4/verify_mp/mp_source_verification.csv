@@ -1,0 +1,9 @@
+sample_name,mp_id,element,n_sites,phase_c_tag,n_mp_spectra,error
+mp-20846__mp-20846-EXAFS-Ca-K,mp-20846,Ca,8,INCOMPAT,-1,"mpr.xas.search failed: AttributeError: 'NoneType' object has no attribute 'search'
+mpr.get_xas_data failed: TypeError: 'NoneType' object is not callable"
+mp-775145__mp-775145-EXAFS-O-K,mp-775145,O,16,INCOMPAT,-1,"mpr.xas.search failed: AttributeError: 'NoneType' object has no attribute 'search'
+mpr.get_xas_data failed: TypeError: 'NoneType' object is not callable"
+mp-560146__mp-560146-EXAFS-Y-K,mp-560146,Y,16,INCOMPAT,-1,"mpr.xas.search failed: AttributeError: 'NoneType' object has no attribute 'search'
+mpr.get_xas_data failed: TypeError: 'NoneType' object is not callable"
+mp-559833__mp-559833-EXAFS-Na-K,mp-559833,Na,16,INCOMPAT,-1,"mpr.xas.search failed: AttributeError: 'NoneType' object has no attribute 'search'
+mpr.get_xas_data failed: TypeError: 'NoneType' object is not callable"

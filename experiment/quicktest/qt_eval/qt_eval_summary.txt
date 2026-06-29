@@ -1,0 +1,18 @@
+QuickTest Step4 评估摘要
+==================================================
+
+checkpoint     : epochepoch=025-valval_loss=2.2120.ckpt
+sample 步数    : 50
+候选结构数/样本 : 1
+StructureMatcher 容差: ltol=0.5  stol=0.8  angle_tol=20°
+
+测试样本总数    : 15
+match_rate     : 0/15 = 0.0%
+mean RMSD (matched): nan Å
+
+平均晶格参数绝对误差（全部15样本，不依赖匹配）:
+  Δa=8.561 Å   Δb=10.798 Å   Δc=11.661 Å
+  Δα=24.74°  Δβ=29.29°  Δγ=37.09°
+
+注：QuickTest 仅 30 epoch + 100步采样，指标仅供 pipeline 验通，
+    不反映正式服（400 epoch + 1000步）的真实性能。

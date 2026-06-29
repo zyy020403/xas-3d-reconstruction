@@ -1,0 +1,11 @@
+=== Step 4e Training Summary ===
+log: C:\Users\T-Cat\Desktop\DiffCSP-main\experiment3\step4e\logs\exp3\version_2\metrics.csv
+total rows: 7937
+{'step': '236969', 'train_loss_step': '1.0210556983947754', 'lattice_loss_step': '8.08731460571289', 'coord_loss_step': '0.9754118919372559', 'type_loss_step': '0.0033915445674210787', 'density_loss_step': '0.08352329581975937', 'type_ce_loss_step': '0.004905502311885357', 'total_loss_step': '1.0210556983947754', 'epoch': '499'}
+{'step': '236979', 'train_loss_step': '0.5692970156669617', 'lattice_loss_step': '7.51947546005249', 'coord_loss_step': '0.5192157030105591', 'type_loss_step': '0.009163961745798588', 'density_loss_step': '0.08047474920749664', 'type_ce_loss_step': '0.0067996857687830925', 'total_loss_step': '0.5692970156669617', 'epoch': '499'}
+{'step': '236989', 'train_loss_step': '0.8465356826782227', 'lattice_loss_step': '7.8188300132751465', 'coord_loss_step': '0.7985585927963257', 'type_loss_step': '0.006038629915565252', 'density_loss_step': '0.08281038701534271', 'type_ce_loss_step': '0.005333075299859047', 'total_loss_step': '0.8465356826782227', 'epoch': '499'}
+{'step': '236997', 'epoch': '499', 'val_loss': '1.1915537118911743', 'val_lattice_loss': '7.165352821350098', 'val_coord_loss': '0.7301549315452576', 'val_type_loss': '0.007925490848720074', 'val_density_loss': '0.08119621872901917', 'val_type_ce_loss': '4.128750324249268', 'val_total_loss': '1.1915537118911743', 'val_type_acc': '0.6012007594108582'}
+{'step': '236997', 'epoch': '499', 'train_loss_epoch': '0.7628680467605591', 'lattice_loss_epoch': '7.307843208312988', 'coord_loss_epoch': '0.7143394351005554', 'type_loss_epoch': '0.007191048935055733', 'density_loss_epoch': '0.08140303939580917', 'type_ce_loss_epoch': '0.006366215646266937', 'total_loss_epoch': '0.7628680467605591'}
+
+best_checkpoint: C:\Users\T-Cat\Desktop\DiffCSP-main\experiment3\step4e\checkpoints\epoch=419-val_coord_loss=0.7249.ckpt
+best_val_total_loss: 0.7249301075935364

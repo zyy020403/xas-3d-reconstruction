@@ -1,0 +1,37 @@
+============================================================
+=== Step 2 端到端测试 ===
+============================================================
+
+[模型参数量]
+  SpectrumEncoder   : 308,384  (30.8 万)
+  MultiSiteAggregator: 658,945  (65.9 万)
+  合计              : 967,329  (96.7 万)
+
+[保留集] 已加载 1000 个 holdout mp_id
+[数据来源] 真实数据: C:\Users\T-Cat\Desktop\DiffCSP-main\experiment\step1\data_inventory.csv
+
+[逐位点编码]
+  mp_id=248: 1 sites → site_embeddings shape: [1, 256]
+  mp_id=8306: 2 sites → site_embeddings shape: [2, 256]
+  mp_id=555: 3 sites → site_embeddings shape: [3, 256]
+  mp_id=4383: 5 sites → site_embeddings shape: [5, 256]
+
+[Batch collation]
+  padded shape       : [4, 5, 256]
+  padding_mask shape : [4, 5]
+  quality_weights    : [4, 5]
+
+[Structure embeddings]
+  shape    : [4, 256]
+  min      : -0.2592
+  max      : 0.2785
+  has_nan  : False
+  has_inf  : False
+
+[排列不变性验证]
+  mp_id=8306, N=2, max diff after permutation: 0.00e+00
+  排列不变性验证: PASSED ✓
+
+============================================================
+=== 测试通过 ✓ ===
+============================================================

@@ -1,0 +1,148 @@
+================================================================
+Step 2.5 Phase A — Summary
+================================================================
+Total samples (pickle):  128,382
+Status 'ok':             128,382
+Train samples used:      102,660
+Total gaps (d ≤ 6 Å):    6,282,151
+
+Status distribution:
+  ok                              128,382
+
+n_center_sites distribution (ok only):
+    1 sites:   13,018  (10.14%)
+    2 sites:   23,537  (18.33%)
+    3 sites:    4,871  ( 3.79%)
+    4 sites:   24,274  (18.91%)
+    5 sites:    1,378  ( 1.07%)
+    6 sites:    9,416  ( 7.33%)
+    7 sites:      838  ( 0.65%)
+    8 sites:   14,242  (11.09%)
+    9 sites:      675  ( 0.53%)
+   10 sites:    2,525  ( 1.97%)
+   11 sites:      328  ( 0.26%)
+   12 sites:    7,841  ( 6.11%)
+   13 sites:      256  ( 0.20%)
+   14 sites:    1,956  ( 1.52%)
+   15 sites:      195  ( 0.15%)
+   16 sites:    5,735  ( 4.47%)
+   17 sites:      122  ( 0.10%)
+   18 sites:    1,386  ( 1.08%)
+   19 sites:      108  ( 0.08%)
+   20 sites:    2,032  ( 1.58%)
+   21 sites:      121  ( 0.09%)
+   22 sites:      357  ( 0.28%)
+   23 sites:       50  ( 0.04%)
+   24 sites:    3,766  ( 2.93%)
+   25 sites:       34  ( 0.03%)
+   26 sites:      313  ( 0.24%)
+   27 sites:       58  ( 0.05%)
+   28 sites:    1,305  ( 1.02%)
+   29 sites:       19  ( 0.01%)
+   30 sites:      316  ( 0.25%)
+   31 sites:       11  ( 0.01%)
+   32 sites:    1,793  ( 1.40%)
+   33 sites:       43  ( 0.03%)
+   34 sites:      145  ( 0.11%)
+   35 sites:       10  ( 0.01%)
+   36 sites:      959  ( 0.75%)
+   37 sites:        4  ( 0.00%)
+   38 sites:      106  ( 0.08%)
+   39 sites:       22  ( 0.02%)
+   40 sites:      717  ( 0.56%)
+   41 sites:       12  ( 0.01%)
+   42 sites:      131  ( 0.10%)
+   43 sites:        4  ( 0.00%)
+   44 sites:      228  ( 0.18%)
+   45 sites:       18  ( 0.01%)
+   46 sites:       30  ( 0.02%)
+   47 sites:        4  ( 0.00%)
+   48 sites:    1,300  ( 1.01%)
+   49 sites:        6  ( 0.00%)
+   50 sites:       33  ( 0.03%)
+   51 sites:        7  ( 0.01%)
+   52 sites:      122  ( 0.10%)
+   53 sites:        5  ( 0.00%)
+   54 sites:       71  ( 0.06%)
+   55 sites:        1  ( 0.00%)
+   56 sites:      327  ( 0.25%)
+   57 sites:        6  ( 0.00%)
+   58 sites:      157  ( 0.12%)
+   60 sites:      168  ( 0.13%)
+   61 sites:        2  ( 0.00%)
+   62 sites:        9  ( 0.01%)
+   63 sites:        2  ( 0.00%)
+   64 sites:      200  ( 0.16%)
+   65 sites:        1  ( 0.00%)
+   66 sites:       11  ( 0.01%)
+   67 sites:        1  ( 0.00%)
+   68 sites:       53  ( 0.04%)
+   69 sites:        1  ( 0.00%)
+   70 sites:        7  ( 0.01%)
+   72 sites:      143  ( 0.11%)
+   74 sites:        4  ( 0.00%)
+   75 sites:        1  ( 0.00%)
+   76 sites:       21  ( 0.02%)
+   78 sites:        6  ( 0.00%)
+   80 sites:       90  ( 0.07%)
+   81 sites:        2  ( 0.00%)
+   82 sites:        3  ( 0.00%)
+   84 sites:       36  ( 0.03%)
+   85 sites:        2  ( 0.00%)
+   86 sites:        3  ( 0.00%)
+   88 sites:       23  ( 0.02%)
+   90 sites:        9  ( 0.01%)
+   92 sites:       14  ( 0.01%)
+   94 sites:        2  ( 0.00%)
+   96 sites:      105  ( 0.08%)
+   98 sites:        1  ( 0.00%)
+  100 sites:        4  ( 0.00%)
+  102 sites:        3  ( 0.00%)
+  104 sites:       18  ( 0.01%)
+  106 sites:        1  ( 0.00%)
+  108 sites:       19  ( 0.01%)
+  110 sites:        1  ( 0.00%)
+  112 sites:       17  ( 0.01%)
+  114 sites:        2  ( 0.00%)
+  115 sites:        1  ( 0.00%)
+  116 sites:        7  ( 0.01%)
+  120 sites:       17  ( 0.01%)
+  124 sites:        1  ( 0.00%)
+  128 sites:        9  ( 0.01%)
+  132 sites:        2  ( 0.00%)
+  136 sites:        4  ( 0.00%)
+  141 sites:        1  ( 0.00%)
+  144 sites:        5  ( 0.00%)
+  146 sites:        1  ( 0.00%)
+  156 sites:        3  ( 0.00%)
+  160 sites:        2  ( 0.00%)
+  >=2 sites:  115,364  (89.86%)   ⚠ FLAG (>20%)
+
+Candidate thresholds (Å):
+  valley                N/A
+  p10 (p90 cut)         0.1563
+  p15 (p85 cut)         0.1047
+  p20 (p80 cut)         0.0762
+  empirical 0.30        0.3000
+
+Simulation results (see candidate_thresholds.csv for full table):
+  p10 (p90 cut)         shells_6A=6.73  shell1_n=4.58  shell1_outer=2.24Å  iso_single%=11.19  merged%=0.62
+  p15 (p85 cut)         shells_6A=9.67  shell1_n=4.07  shell1_outer=2.21Å  iso_single%=15.63  merged%=0.05
+  p20 (p80 cut)         shells_6A=12.62  shell1_n=3.74  shell1_outer=2.19Å  iso_single%=20.34  merged%=0.00
+  empirical 0.30        shells_6A=3.76  shell1_n=9.85  shell1_outer=2.41Å  iso_single%=6.78  merged%=6.97
+
+Global gap stats:
+  n_gaps  : 6,282,151
+  mean    : 0.06435
+  median  : 0.01238
+  std     : 0.15734
+  min     : 0.00000
+  max     : 5.36923
+  p25     : 0.00000
+  p50     : 0.01238
+  p75     : 0.05743
+  p80     : 0.07621
+  p85     : 0.10474
+  p90     : 0.15629
+  p95     : 0.29288
+  p99     : 0.84845

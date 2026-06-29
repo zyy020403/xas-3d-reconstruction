@@ -1,0 +1,42 @@
+==============================================================================
+Exp5 v2 metrics summary (organized for advisor presentation)
+==============================================================================
+
+[v2_val] N=7621
+  RMSD                        : 1.4954  (median 1.4850)
+  Hungarian TypeAcc (strict)  : 0.1979
+  CN (coord. number) — strict : 0.0974   <-- 配位数完全相等
+  CN (coord. number) — loose  : 0.2874    <-- 配位数误差≤1
+  Shell-1 Top1 element acc    : 0.4480    <-- 第一壳层主元素
+  Bond length MAE (Å)         : 0.5913 <-- 物理直观
+  Shell-1 RMSD (Å)            : 1.4577 (median 1.4562)  <-- 仅近邻
+
+
+[exp4_val] N=7621
+  RMSD                        : 1.4849  (median 1.4746)
+  Hungarian TypeAcc (strict)  : 0.1877
+  CN (coord. number) — strict : 0.1009   <-- 配位数完全相等
+  CN (coord. number) — loose  : 0.2962    <-- 配位数误差≤1
+  Shell-1 Top1 element acc    : 0.4337    <-- 第一壳层主元素
+  Bond length MAE (Å)         : 0.5907 <-- 物理直观
+  Shell-1 RMSD (Å)            : 1.4498 (median 1.4458)  <-- 仅近邻
+
+
+[v2_test] N=4481
+  RMSD                        : 1.4928  (median 1.4827)
+  Hungarian TypeAcc (strict)  : 0.1969
+  CN (coord. number) — strict : 0.0986   <-- 配位数完全相等
+  CN (coord. number) — loose  : 0.2868    <-- 配位数误差≤1
+  Shell-1 Top1 element acc    : 0.4508    <-- 第一壳层主元素
+  Bond length MAE (Å)         : 0.5949 <-- 物理直观
+  Shell-1 RMSD (Å)            : 1.4555 (median 1.4507)  <-- 仅近邻
+
+
+[exp4_test] N=4481
+  RMSD                        : 1.4852  (median 1.4712)
+  Hungarian TypeAcc (strict)  : 0.1904
+  CN (coord. number) — strict : 0.0935   <-- 配位数完全相等
+  CN (coord. number) — loose  : 0.2745    <-- 配位数误差≤1
+  Shell-1 Top1 element acc    : 0.4378    <-- 第一壳层主元素
+  Bond length MAE (Å)         : 0.5932 <-- 物理直观
+  Shell-1 RMSD (Å)            : 1.4447 (median 1.4395)  <-- 仅近邻

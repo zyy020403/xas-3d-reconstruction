@@ -1,0 +1,26 @@
+--- /home/claude/exp5/code/step3/xas_local_datamodule_v2.py.bak_exp4	2026-04-27 16:10:16.000000000 +0000
++++ /home/claude/exp5/code/step3/xas_local_datamodule_v2.py	2026-04-27 16:13:44.000000000 +0000
+@@ -84,6 +84,11 @@
+         eval_cutoff_fallback float32 (bool → float)
+         n_center_sites       long
+ 
++      Exp5 SA1 — center-element conditioning (graph-level (1,)-tensor → (B,) at batch):
++        s["center_element_Z"]  int   →  data.center_element_Z  long
++        SpectrumEncoder reads this through nn.Embedding(95, 16) lookup
++        and concatenates with spectrum latent (256 + 16 = 272-dim).
++
+       String metadata (Step 5 audit; PyG collects to list[str] in batch):
+         sample_name, mp_id, center_element, site_equivalence_tag
+     """
+@@ -107,6 +112,11 @@
+         eval_cutoff          = torch.tensor([s["eval_cutoff"]],          dtype=torch.float32),
+         eval_cutoff_fallback = torch.tensor([float(s["eval_cutoff_fallback"])], dtype=torch.float32),
+         n_center_sites       = torch.tensor([s["n_center_sites"]],       dtype=torch.long),
++
++        # ---- Exp5 SA1: center-element conditioning ----
++        # Graph-level (1,) long tensor → (B,) at batch; SpectrumEncoder uses
++        # nn.Embedding(95, 16) lookup on this for center-element conditioning.
++        center_element_Z     = torch.tensor([s["center_element_Z"]],     dtype=torch.long),
+     )
+     # ---- String metadata (PyG batches collect to list[str]) ----
+     # forward() / sample() do NOT touch these. Step 5 audit reads them.

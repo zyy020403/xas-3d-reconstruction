@@ -1,0 +1,36 @@
+============================================================
+Step 2 summary
+============================================================
+wall-clock         : 379.8 s (6.3 min)
+samples processed  : 128382 / 128382
+failures           : 0
+
+-- per-split sizes --
+  train  : N=102660  (expected 102660)  pkl=148.4 MB
+  val    : N= 12912  (expected 12912)  pkl=18.7 MB
+  test   : N=  7696  (expected 7696)  pkl=11.1 MB
+  holdout: N=  5114  (expected 5114)  pkl=7.4 MB
+
+-- stats --
+  split  n_samples  xmu_mean  xmu_std    xmu_min   xmu_max  chi1_mean  chi1_std    chi1_min   chi1_max
+  train     102660  0.975895 0.643971 -58.408901 61.146832  -0.005921  2.226854 -207.399704 145.398636
+    val      12912  0.976110 0.648665 -26.752199 12.001500  -0.005488  2.252033 -139.470779 124.098740
+   test       7696  0.973877 0.626175  -9.316360 13.621600  -0.005740  2.173235 -149.329788 112.422104
+holdout       5114  0.972374 0.626977  -9.830127 13.993300  -0.006234  2.144457  -85.029449  86.451309
+
+-- extrapolation --
+  split  xmu_left_extrap  xmu_right_extrap  chi_right_extrap
+  train            92476                 0                 0
+    val            11645                 0                 0
+   test             6942                 0                 0
+holdout             4607                 0                 0
+  TOTAL           115670                 0                 0
+
+-- warnings --
+  (none)
+
+-- locked params --
+  xmu window : [E0-50, E0+150] eV, N=150
+  chi window : k ∈ [0.0, 12.0] Å⁻¹, N=200, column='chi1'
+  dtype=float32, interp=np.interp (linear, constant extrapolation)
+============================================================

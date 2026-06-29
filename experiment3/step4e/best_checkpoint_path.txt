@@ -1,0 +1,1 @@
+C:\Users\T-Cat\Desktop\DiffCSP-main\experiment3\step4e\checkpoints\epoch=419-val_coord_loss=0.7249.ckpt

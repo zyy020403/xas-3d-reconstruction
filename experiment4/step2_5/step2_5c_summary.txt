@@ -1,0 +1,51 @@
+================================================================
+Step 2.5 Phase C — Multi-site diagnostic summary
+================================================================
+Samples processed:  20 / 20 (errors: 0)
+Threshold used:     0.1563 Å  (matches Phase B)
+
+Q1. 所有等价位点 shell-1 完全一致的样本比例:
+   8 / 20 = 40.0%
+
+Q2. max_shell1_distance_MAE 分布 (excluding length-incompat):
+   n=16  median=0.0036  p90=0.0852  max=0.1863
+   samples with length-incompat between sites: 4/20
+
+Decision guide (per MA):
+   40.0% ≥ 70% → Option A (keep 'first site'), tag site_equivalence
+   40.0% <  70% → Option B variant: Step 3 Dataset randomly picks one equivalent site per __getitem__
+
+Per-sample results:
+                      sample_name      mp_id center_element  n_center_sites_prev  n_center_sites_redo  shell1_all_equal  n_unique_shell1_signatures  max_shell1_distance_MAE  any_incompatible_length                    shell1_sizes error
+  mp-766754__mp-766754-EXAFS-Ni-K  mp-766754             Ni                    2                    2              True                           1                   0.0000                    False                             6,6      
+      mp-4288__mp-4288-EXAFS-Ni-K    mp-4288             Ni                    2                    2              True                           1                   0.0000                    False                             5,5      
+  mp-581488__mp-581488-EXAFS-Cl-K  mp-581488             Cl                    2                    2              True                           1                   0.0000                    False                             1,1      
+mp-1048236__mp-1048236-EXAFS-Ba-K mp-1048236             Ba                    2                    2              True                           1                   0.0000                    False                           10,10      
+      mp-4073__mp-4073-EXAFS-Co-K    mp-4073             Co                    2                    2              True                           1                   0.0000                    False                             4,4      
+   mp-863076__mp-863076-EXAFS-O-K  mp-863076              O                    4                    4             False                           2                   0.1053                    False                         1,1,1,1      
+      mp-1143__mp-1143-EXAFS-Al-K    mp-1143             Al                    4                    4              True                           1                   0.0000                    False                         6,6,6,6      
+  mp-558539__mp-558539-EXAFS-Ba-K  mp-558539             Ba                    4                    4              True                           1                   0.0000                    False                         6,6,6,6      
+  mp-763576__mp-763576-EXAFS-Fe-K  mp-763576             Fe                    4                    4             False                           2                   0.0652                    False                         6,6,6,6      
+  mp-674858__mp-674858-EXAFS-Ni-K  mp-674858             Ni                    4                    4              True                           1                   0.0000                    False                         5,5,5,5      
+  mp-559918__mp-559918-EXAFS-Ti-K  mp-559918             Ti                    8                    8             False                           3                   0.0395                    False                 6,6,6,6,6,6,6,6      
+   mp-770316__mp-770316-EXAFS-O-K  mp-770316              O                    8                    8             False                           4                   0.0322                    False                 6,6,6,6,6,6,6,6      
+  mp-556756__mp-556756-EXAFS-Sb-K  mp-556756             Sb                    8                    8             False                           2                   0.0197                    False                 6,6,6,6,6,6,6,6      
+   mp-540038__mp-540038-EXAFS-P-K  mp-540038              P                    8                    8             False                           2                   0.0208                    False                 4,4,4,4,4,4,4,4      
+    mp-20846__mp-20846-EXAFS-Ca-K   mp-20846             Ca                    8                    8             False                           2                 999.0000                     True             13,13,13,13,2,2,2,2      
+  mp-572546__mp-572546-EXAFS-Cl-K  mp-572546             Cl                   16                   16             False                           3                   0.1863                    False 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1      
+    mp-30022__mp-30022-EXAFS-Cl-K   mp-30022             Cl                   16                   16             False                           2                   0.0072                    False 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1      
+   mp-560146__mp-560146-EXAFS-Y-K  mp-560146              Y                   16                   16             False                           4                 999.0000                     True 7,6,7,7,6,7,7,7,7,7,6,7,7,7,6,7      
+  mp-559833__mp-559833-EXAFS-Na-K  mp-559833             Na                   16                   16             False                           2                 999.0000                     True 6,5,6,6,5,5,5,5,6,6,5,5,6,6,5,6      
+   mp-775145__mp-775145-EXAFS-O-K  mp-775145              O                   16                   16             False                          12                 999.0000                     True 3,4,4,4,4,3,3,3,4,2,4,4,4,3,2,3      
+
+MP EXAFS protocol lookup — MANUAL CHECK NEEDED:
+  Sub-Agent has no mp-api credentials in this environment.
+  To resolve site-specific vs site-averaged semantics, please check one of:
+    (a) Materials Project docs:  https://docs.materialsproject.org/
+        → search for 'XAS' or 'EXAFS' workflow docs
+    (b) FEFF calculation page of a known sample, e.g.:
+        https://next-gen.materialsproject.org/materials/mp-18658
+        → XAS tab → look for 'Absorbing Atom' or 'Averaged Sites' tag
+    (c) The source paper: Mathew et al., Scientific Data 5, 180151 (2018)
+        'High-throughput computational X-ray absorption spectroscopy'
+  Key term to find: 'site-averaged' vs 'site-specific' FEFF spectra.

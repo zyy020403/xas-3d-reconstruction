@@ -1,0 +1,36 @@
+================================================================
+Exp4 Dataset — Final Name Card
+================================================================
+
+Total samples:         75,637
+Total mp_ids:          35,445
+Element coverage:          88  (Step 1 reported 88)
+
+Split distribution:
+  train        60,507  (80.00%)
+  val           7,624  (10.08%)
+  test          4,481  ( 5.92%)
+  holdout       3,025  ( 4.00%)
+
+Tag distribution (kept samples):
+  single_site              13,018  (17.21%)
+  equivalent               53,877  (71.23%)
+  near_equivalent           8,742  (11.56%)
+
+Comparison with Exp2:
+  Exp2: ~11,636 samples (Fe-oxide focus, single element)
+  Exp4: 75,637 samples (35,445 mp_ids, 88 elements)
+        → 6.5× more samples, 88× more elements
+
+Sealed (incompat_pool.csv, reserved for Exp5):
+  52,745 samples (40.31% of original 128,382)
+    51,746 tagged 'incompat'
+    999 tagged 'near_equivalent' with multiset mismatch
+
+Output files in this drop:
+  data_inventory_v2.csv     (75,637 rows)
+  train_samples_v2.csv      (60,507 rows)
+  val_samples_v2.csv        (7,624 rows)
+  test_samples_v2.csv       (4,481 rows)
+  holdout_samples_v2.csv    (3,025 rows)
+  incompat_pool.csv         (52,745 rows, sealed)

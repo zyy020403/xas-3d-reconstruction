@@ -1,0 +1,169 @@
+========================================================================
+Step 2.5 Phase D v2 — brute-force multi-site tagging summary
+========================================================================
+Total samples:           128,382
+Wall-clock (compute):    598.9 s (9.98 min)
+Wall-clock (total):      628.7 s
+Sanity check:            5/5 samples matched Phase A (MAE tol = 0.01 Å, count + species exact)
+
+Tag distribution (overall):
+  single_site             13,018  (10.14%)
+  equivalent              53,877  (41.97%)
+  near_equivalent          9,741  ( 7.59%)
+  incompat                51,746  (40.31%)
+
+Tag × split (counts):
+split             train    val  test  holdout     ALL
+tag                                                  
+single_site       10397   1341   803      477   13018
+equivalent        43119   5423  3168     2167   53877
+near_equivalent    7785    956   573      427    9741
+incompat          41359   5192  3152     2043   51746
+ALL              102660  12912  7696     5114  128382
+
+Tag × split (% within split):
+split             train     val    test  holdout     ALL
+tag                                                     
+single_site       10.13   10.39   10.43     9.33   10.14
+equivalent        42.00   42.00   41.16    42.37   41.97
+near_equivalent    7.58    7.40    7.45     8.35    7.59
+incompat          40.29   40.21   40.96    39.95   40.31
+ALL              100.00  100.00  100.00   100.00  100.00
+
+Sub-statistic: 'near_equivalent' with multiset mismatch
+  count: 999 of 9,741 near_equivalent rows (10.26%)
+
+Incompat by center_element (top 15 by absolute count):
+center_element  n_incompat  n_total  incompat_pct
+             O       16806    22441         74.89
+            Li        3401     7147         47.59
+             F        2413     3762         64.14
+             P        1960     5495         35.67
+             S        1437     3258         44.11
+            Fe        1410     3481         40.51
+            Mn        1341     3313         40.48
+             V        1065     2913         36.56
+            Na        1007     2367         42.54
+            Cl         860     1818         47.30
+             K         796     1985         40.10
+            Ni         768     2478         30.99
+             B         745     2097         35.53
+            Se         719     1589         45.25
+             N         715     2196         32.56
+
+Incompat by n_center_sites bucket:
+  n_sites=  2:   1,076  ( 2.08% of incompat)
+  n_sites=  3:   2,029  ( 3.92% of incompat)
+  n_sites=  4:   4,890  ( 9.45% of incompat)
+  n_sites=  5:   1,123  ( 2.17% of incompat)
+  n_sites=  6:   4,745  ( 9.17% of incompat)
+  n_sites=  7:     727  ( 1.40% of incompat)
+  n_sites=  8:   7,177  (13.87% of incompat)
+  n_sites=  9:     584  ( 1.13% of incompat)
+  n_sites= 10:   2,254  ( 4.36% of incompat)
+  n_sites= 11:     287  ( 0.55% of incompat)
+  n_sites= 12:   5,101  ( 9.86% of incompat)
+  n_sites= 13:     223  ( 0.43% of incompat)
+  n_sites= 14:   1,836  ( 3.55% of incompat)
+  n_sites= 15:     177  ( 0.34% of incompat)
+  n_sites= 16:   4,320  ( 8.35% of incompat)
+  n_sites= 17:     115  ( 0.22% of incompat)
+  n_sites= 18:   1,184  ( 2.29% of incompat)
+  n_sites= 19:     106  ( 0.20% of incompat)
+  n_sites= 20:   1,860  ( 3.59% of incompat)
+  n_sites= 21:     117  ( 0.23% of incompat)
+  n_sites= 22:     336  ( 0.65% of incompat)
+  n_sites= 23:      49  ( 0.09% of incompat)
+  n_sites= 24:   2,966  ( 5.73% of incompat)
+  n_sites= 25:      33  ( 0.06% of incompat)
+  n_sites= 26:     305  ( 0.59% of incompat)
+  n_sites= 27:      53  ( 0.10% of incompat)
+  n_sites= 28:   1,267  ( 2.45% of incompat)
+  n_sites= 29:      18  ( 0.03% of incompat)
+  n_sites= 30:     295  ( 0.57% of incompat)
+  n_sites= 31:      11  ( 0.02% of incompat)
+  n_sites= 32:   1,468  ( 2.84% of incompat)
+  n_sites= 33:      43  ( 0.08% of incompat)
+  n_sites= 34:     135  ( 0.26% of incompat)
+  n_sites= 35:      10  ( 0.02% of incompat)
+  n_sites= 36:     906  ( 1.75% of incompat)
+  n_sites= 37:       4  ( 0.01% of incompat)
+  n_sites= 38:     100  ( 0.19% of incompat)
+  n_sites= 39:      21  ( 0.04% of incompat)
+  n_sites= 40:     670  ( 1.29% of incompat)
+  n_sites= 41:      12  ( 0.02% of incompat)
+  n_sites= 42:     129  ( 0.25% of incompat)
+  n_sites= 43:       4  ( 0.01% of incompat)
+  n_sites= 44:     224  ( 0.43% of incompat)
+  n_sites= 45:      18  ( 0.03% of incompat)
+  n_sites= 46:      27  ( 0.05% of incompat)
+  n_sites= 47:       4  ( 0.01% of incompat)
+  n_sites= 48:   1,024  ( 1.98% of incompat)
+  n_sites= 49:       6  ( 0.01% of incompat)
+  n_sites= 50:      32  ( 0.06% of incompat)
+  n_sites= 51:       7  ( 0.01% of incompat)
+  n_sites= 52:     121  ( 0.23% of incompat)
+  n_sites= 53:       5  ( 0.01% of incompat)
+  n_sites= 54:      66  ( 0.13% of incompat)
+  n_sites= 55:       1  ( 0.00% of incompat)
+  n_sites= 56:     322  ( 0.62% of incompat)
+  n_sites= 57:       6  ( 0.01% of incompat)
+  n_sites= 58:     156  ( 0.30% of incompat)
+  n_sites= 60:     159  ( 0.31% of incompat)
+  n_sites= 61:       2  ( 0.00% of incompat)
+  n_sites= 62:       9  ( 0.02% of incompat)
+  n_sites= 63:       2  ( 0.00% of incompat)
+  n_sites= 64:     169  ( 0.33% of incompat)
+  n_sites= 65:       1  ( 0.00% of incompat)
+  n_sites= 66:      11  ( 0.02% of incompat)
+  n_sites= 67:       1  ( 0.00% of incompat)
+  n_sites= 68:      53  ( 0.10% of incompat)
+  n_sites= 69:       1  ( 0.00% of incompat)
+  n_sites= 70:       7  ( 0.01% of incompat)
+  n_sites= 72:     131  ( 0.25% of incompat)
+  n_sites= 74:       4  ( 0.01% of incompat)
+  n_sites= 75:       1  ( 0.00% of incompat)
+  n_sites= 76:      21  ( 0.04% of incompat)
+  n_sites= 78:       6  ( 0.01% of incompat)
+  n_sites= 80:      85  ( 0.16% of incompat)
+  n_sites= 81:       2  ( 0.00% of incompat)
+  n_sites= 82:       3  ( 0.01% of incompat)
+  n_sites= 84:      35  ( 0.07% of incompat)
+  n_sites= 85:       2  ( 0.00% of incompat)
+  n_sites= 86:       3  ( 0.01% of incompat)
+  n_sites= 88:      23  ( 0.04% of incompat)
+  n_sites= 90:       9  ( 0.02% of incompat)
+  n_sites= 92:      13  ( 0.03% of incompat)
+  n_sites= 94:       2  ( 0.00% of incompat)
+  n_sites= 96:      92  ( 0.18% of incompat)
+  n_sites= 98:       1  ( 0.00% of incompat)
+  n_sites=100:       4  ( 0.01% of incompat)
+  n_sites=102:       3  ( 0.01% of incompat)
+  n_sites=104:      18  ( 0.03% of incompat)
+  n_sites=106:       1  ( 0.00% of incompat)
+  n_sites=108:      19  ( 0.04% of incompat)
+  n_sites=110:       1  ( 0.00% of incompat)
+  n_sites=112:      16  ( 0.03% of incompat)
+  n_sites=114:       2  ( 0.00% of incompat)
+  n_sites=115:       1  ( 0.00% of incompat)
+  n_sites=116:       7  ( 0.01% of incompat)
+  n_sites=120:      16  ( 0.03% of incompat)
+  n_sites=124:       1  ( 0.00% of incompat)
+  n_sites=128:       6  ( 0.01% of incompat)
+  n_sites=132:       2  ( 0.00% of incompat)
+  n_sites=136:       4  ( 0.01% of incompat)
+  n_sites=141:       1  ( 0.00% of incompat)
+  n_sites=144:       5  ( 0.01% of incompat)
+  n_sites=146:       1  ( 0.00% of incompat)
+  n_sites=156:       3  ( 0.01% of incompat)
+  n_sites=160:       2  ( 0.00% of incompat)
+
+Notes:
+  - Neighbor finder: pure-numpy brute-force (pymatgen Cython broken in env)
+  - Sanity-checked vs Phase A's saved distances on 5 samples before run
+  - shell1_outer source: shell_boundaries.pkl shell_ends[0]
+  - r_query = shell1_outer + 0.05 Å
+  - filter tolerance: distance <= shell1_outer + 0.005 Å
+  - 'equivalent':     all multisets equal AND max site-pair MAE < 0.01 Å
+  - 'near_equivalent': all counts equal AND max site-pair MAE < 0.1 Å
+  - max_shell1_MAE = 999.0 → counts mismatch (incompat)

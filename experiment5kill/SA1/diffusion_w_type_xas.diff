@@ -1,0 +1,335 @@
+--- /home/claude/exp5/code/step3/diffusion_w_type_xas.py.bak_exp4	2026-04-27 16:10:16.000000000 +0000
++++ /home/claude/exp5/code/step3/diffusion_w_type_xas.py	2026-04-27 22:37:40.272328500 +0000
+@@ -1,7 +1,27 @@
+ """
+ diffusion_w_type_xas.py  (v3 — Step4c, [-0.5, 0.5] coordinate space)
++                         (Exp5 SA1 patch — TypeClassifierHead + center conditioning)
+ ======================================================================
+-Changes from v2:
++Changes from Exp4 v3:
++  Exp5 SA1 — three structural additions (EXP5_STEP1_HANDOFF §2):
++    1. SpectrumEncoder.forward() now takes batch.center_element_Z and outputs
++       (B, 272) = latent (256) ⊕ center_emb (16). Decoder input thus widens
++       from 512 to 528 (time_emb 256 + spectrum 272). Decoder yaml latent_dim
++       must be 528 — Exp4 ckpt's first decoder Linear (in=512) is shape-
++       mismatched with Exp5 (in=528) and will be SKIPPED on strict=False load
++       (random-init, intentional; SA2 phased training Notes §8.1 handles).
++    2. New TypeClassifierHead: input (B, 272), output (B, 20, 100). Uses
++       slot-aligned CE loss against batch.atom_types (pre-sorted by distance
++       in dataset_v2). NO Hungarian during training (handoff §2.3).
++    3. yaml-driven type_loss_mode flag with three modes (handoff §2.4):
++         "diffusion_only": use Exp4 inner type MSE only
++         "head_only":      use new head CE only (diffusion type still computed
++                           but weight 0 — backbone gradient stays alive)
++         "both":           sum both (default for SA2 first run)
++       Default head/diffusion type weights: head_type_weight=0.5,
++       diffusion_type_weight=1.0 (overrides Exp4 cost_type when set).
++
++Changes from Exp2 v2 (preserved Exp4 behavior, unchanged here):
+   1. forward(): removed % 1. from noisy_frac_coords computation
+      → noisy coords stay in [-0.5, 0.5] neighbourhood, matching Dataset v5 output
+   2. sample(): x_T prior changed from Uniform[0,1] to Uniform[-0.5, 0.5]
+@@ -10,7 +30,7 @@
+   3. _density_loss(): unchanged — its internal % 1. fold is intentional (maps arbitrary
+      range to [-0.5, 0.5]) and must NOT be removed.
+ 
+-Coordinate contract (v3):
++Coordinate contract (v3, unchanged):
+   Dataset v5      → frac_coords ∈ [-0.5, 0.5]
+   forward()       → input_frac_coords ∈ [-0.5, 0.5] (no % 1. fold)
+   sample() prior  → x_T ∈ [-0.5, 0.5]  (torch.rand - 0.5)
+@@ -83,6 +103,54 @@
+         return emb
+ 
+ 
++# ── Exp5 SA1: TypeClassifierHead ─────────────────────────────────────────────
++
++class TypeClassifierHead(nn.Module):
++    """
++    Decoupled type classification head (EXP5_STEP1_HANDOFF §2.2 row 3).
++
++    Takes the spectrum-with-center latent (B, 272) and predicts atom-type
++    logits for all 20 neighbor slots simultaneously:
++        Linear(272 → 512) → SiLU → Linear(512 → 20*100) → reshape (B, 20, 100)
++
++    Slot-aligned with dataset_v2 output: logits[:, k, :] ↔ ground-truth slot k
++    (atoms pre-sorted by distance to center). Training uses simple CE per slot;
++    no Hungarian in the training loop (Hungarian only in eval/sample path,
++    SA3's responsibility — see handoff §2.3).
++
++    Output classes = MAX_ATOMIC_NUM = 100 (matches Exp4 inner one_hot dim;
++    handoff §3.1 OPEN QUESTION about [1, 109] forward_test bound vs 100 inner —
++    SA1 chooses 100 to align with diffusion inner; SA2 must verify dataset
++    has no Z>100 neighbor atom — Exp4 trained successfully so this should hold).
++    """
++
++    def __init__(self, in_dim: int, hidden_dim: int = 512,
++                 n_atoms: int = 20, n_elements: int = 100):
++        super().__init__()
++        self.n_atoms = n_atoms
++        self.n_elements = n_elements
++        self.in_dim = in_dim
++        self.fc = nn.Sequential(
++            nn.Linear(in_dim, hidden_dim),
++            nn.SiLU(),
++            nn.Linear(hidden_dim, n_atoms * n_elements),
++        )
++
++    def forward(self, latent_with_center: torch.Tensor) -> torch.Tensor:
++        """
++        Parameters
++        ----------
++        latent_with_center : Tensor (B, in_dim)   — typically (B, 272)
++
++        Returns
++        -------
++        Tensor (B, n_atoms, n_elements)  — typically (B, 20, 100)
++        """
++        B = latent_with_center.shape[0]
++        flat = self.fc(latent_with_center)            # (B, n_atoms * n_elements)
++        return flat.view(B, self.n_atoms, self.n_elements)
++
++
+ # ── 主模型 ────────────────────────────────────────────────────────────────────
+ 
+ class CSPDiffusion(BaseModule):
+@@ -101,17 +169,51 @@
+         self.keep_lattice    = self.hparams.cost_lattice < 1e-5
+         self.keep_coords     = self.hparams.cost_coord  < 1e-5
+ 
+-        # ★ SpectrumEncoder
++        # ★ SpectrumEncoder (Exp5 SA1: now outputs (B, 272) = latent ⊕ center_emb)
+         self.spectrum_encoder = SpectrumEncoder(
+             xmu_dim    = self.hparams.get('xmu_dim',   150),
+             chi_dim    = self.hparams.get('chi_dim',   200),
+             feat_dim   = self.hparams.get('feat_dim',  74),
+             latent_dim = self.hparams.get('spectrum_latent_dim', 256),
++            n_center_elements = self.hparams.get('n_center_elements', 95),
++            center_emb_dim    = self.hparams.get('center_emb_dim', 16),
+         )
++        # spectrum encoder full output dim (latent + center_emb)
++        self._spectrum_out_dim = self.spectrum_encoder.output_dim   # 272
+ 
+         # ★ density loss 权重（从 YAML 读取，默认 0.5）
+         self.cost_density = float(self.hparams.get('cost_density', 0.5))
+ 
++        # ── Exp5 SA1: TypeClassifierHead (decoupled) ──────────
++        # Input dim = spectrum_encoder.output_dim (272 by default).
++        # Output = (B, n_atoms=20, n_elements=100) logits.
++        self.type_head = TypeClassifierHead(
++            in_dim     = self._spectrum_out_dim,
++            hidden_dim = int(self.hparams.get('type_head_hidden_dim', 512)),
++            n_atoms    = int(self.hparams.get('n_atoms', 20)),
++            n_elements = int(self.hparams.get('n_elements', MAX_ATOMIC_NUM)),
++        )
++
++        # ── Exp5 SA1: three-mode type-loss aggregation flags ──
++        # diffusion_only: use Exp4 inner type MSE only (Exp4 baseline behavior)
++        # head_only:      use new head CE only (diffusion type still computed for
++        #                 backbone gradient continuity but weight-zeroed in total)
++        # both:           sum both — default for SA2 first run
++        self.type_loss_mode = str(self.hparams.get('type_loss_mode', 'both')).lower()
++        if self.type_loss_mode not in ('diffusion_only', 'head_only', 'both'):
++            raise ValueError(
++                f"type_loss_mode must be one of "
++                f"'diffusion_only'/'head_only'/'both', got {self.type_loss_mode!r}"
++            )
++        # Weights:
++        #   diffusion_type_weight overrides legacy cost_type when explicitly set
++        #   head_type_weight is new (no Exp4 analog)
++        self.diffusion_type_weight = float(
++            self.hparams.get('diffusion_type_weight',
++                             self.hparams.get('cost_type', 1.0))
++        )
++        self.head_type_weight = float(self.hparams.get('head_type_weight', 0.5))
++
+     # ─────────────────────────────────────────────────────────────────────────
+     # ★ 密度正则：Tweedie 估算 x0，最小镜像后 L2 惩罚
+     #   注意：此处的 % 1.0 折叠是"将任意范围的 x0_hat 映射到 [-0.5, 0.5]"
+@@ -149,11 +251,14 @@
+         times      = self.beta_scheduler.uniform_sample_t(batch_size, self.device)
+         time_emb   = self.time_embedding(times)
+ 
++        # Exp5 SA1: SpectrumEncoder now returns (B, 272) = latent ⊕ center_emb
+         spectrum_cond = self.spectrum_encoder(
+             batch.xmu_xanes,
+             batch.chi1,
+             batch.feff_features,
++            batch.center_element_Z,   # Exp5 SA1
+         )
++        # condition dim = time_dim (256) + spectrum_out_dim (272) = 528
+         condition = torch.cat([time_emb, spectrum_cond], dim=-1)
+ 
+         alphas_cumprod = self.beta_scheduler.alphas_cumprod[times]
+@@ -180,8 +285,13 @@
+         # v3（正确）：
+         input_frac_coords = frac_coords + sigmas_per_atom * rand_x
+ 
++        # Exp5 SA1 fix (phase 6.5): cast onehot to model's working dtype, not fp32.
++        # F.one_hot returns int64; .float() forces fp32 even when model is bf16,
++        # which then causes "mat1 Float vs mat2 BFloat16" in cspnet's first
++        # F.linear(atom_type_probs, weight). Use c0.dtype to follow the model's
++        # current precision (fp32 in CPU phase 6.4, bf16 in GPU phase 6.5).
+         gt_atom_types_onehot = F.one_hot(
+-            batch.atom_types - 1, num_classes=MAX_ATOMIC_NUM).float()
++            batch.atom_types - 1, num_classes=MAX_ATOMIC_NUM).to(c0.dtype)
+         rand_t = torch.randn_like(gt_atom_types_onehot)
+         atom_type_probs = (
+             c0.repeat_interleave(batch.num_atoms)[:, None] * gt_atom_types_onehot
+@@ -202,23 +312,50 @@
+ 
+         loss_lattice = F.mse_loss(pred_l, rand_l)
+         loss_coord   = F.mse_loss(pred_x, tar_x)
+-        loss_type    = F.mse_loss(pred_t, rand_t)
++        loss_type    = F.mse_loss(pred_t, rand_t)   # diffusion-internal type MSE
+ 
+         # ★ 密度正则损失
+         loss_density = self._density_loss(
+             input_frac_coords, pred_x, sigmas_per_atom, sigmas_norm_per_atom)
+ 
++        # ── Exp5 SA1: head CE loss (slot-aligned, no Hungarian in training) ──
++        # spectrum_cond is per-graph (B, 272); head outputs (B, 20, 100).
++        # batch.atom_types is (B*20,) flat; reshape to (B, 20) for slot CE.
++        head_logits = self.type_head(spectrum_cond)                      # (B, 20, n_elem)
++        true_types_per_slot = batch.atom_types.view(batch_size, -1)      # (B, 20)
++        # CE expects logits in (N, C) and targets (N,) with class indices in [0, C-1].
++        # atom_types are 1-indexed Z values; we use Z-1 to align with one_hot logic above.
++        loss_type_ce_head = F.cross_entropy(
++            head_logits.reshape(-1, self.type_head.n_elements),          # (B*20, n_elem)
++            (true_types_per_slot.reshape(-1) - 1).long(),                # (B*20,) class idx
++        )
++
++        # ── Exp5 SA1: three-mode type-loss aggregation ──
++        if self.type_loss_mode == 'diffusion_only':
++            loss_type_total = self.diffusion_type_weight * loss_type
++        elif self.type_loss_mode == 'head_only':
++            # head only enters total; diffusion-inner type still computed above
++            # (kept alive for backbone gradient continuity per handoff §2.4 note)
++            loss_type_total = self.head_type_weight * loss_type_ce_head
++        else:  # 'both'
++            loss_type_total = (self.diffusion_type_weight * loss_type
++                               + self.head_type_weight * loss_type_ce_head)
++
+         loss = (self.hparams.cost_lattice * loss_lattice
+                 + self.hparams.cost_coord  * loss_coord
+-                + self.hparams.cost_type   * loss_type
++                + loss_type_total                          # Exp5 SA1: replaces cost_type * loss_type
+                 + self.cost_density        * loss_density)
+ 
+         output = {
+-            'loss':         loss,
+-            'loss_lattice': loss_lattice,
+-            'loss_coord':   loss_coord,
+-            'loss_type':    loss_type,
+-            'loss_density': loss_density,
++            'loss':              loss,
++            'loss_lattice':      loss_lattice,
++            'loss_coord':        loss_coord,
++            'loss_type':         loss_type,                # diffusion-internal MSE (back-compat name)
++            'loss_density':      loss_density,
++            # ── Exp5 SA1 additions ──
++            'loss_diffusion_type': loss_type,              # alias for clarity
++            'loss_type_ce_head':   loss_type_ce_head,      # head CE
++            'loss_type_total':     loss_type_total,        # what enters total per current mode
+         }
+         if _return_noisy_frac:
+             output['_input_frac_coords'] = input_frac_coords.detach()
+@@ -236,10 +373,12 @@
+     def sample(self, batch, diff_ratio=1.0, step_lr=1e-5):
+         batch_size = batch.num_graphs
+ 
++        # Exp5 SA1: spectrum_encoder now takes center_Z and outputs (B, 272)
+         spectrum_cond = self.spectrum_encoder(
+             batch.xmu_xanes,
+             batch.chi1,
+             batch.feff_features,
++            batch.center_element_Z,   # Exp5 SA1
+         )
+ 
+         l_T = torch.randn([batch_size, 3, 3]).to(self.device)
+@@ -367,12 +506,17 @@
+ 
+     def training_step(self, batch: Any, batch_idx: int) -> torch.Tensor:
+         output_dict = self(batch)
++        # Exp5 SA1: log all four losses + total
+         self.log_dict({
+-            'train_loss':    output_dict['loss'],
+-            'lattice_loss':  output_dict['loss_lattice'],
+-            'coord_loss':    output_dict['loss_coord'],
+-            'type_loss':     output_dict['loss_type'],
+-            'density_loss':  output_dict['loss_density'],
++            'train_loss':              output_dict['loss'],
++            'lattice_loss':            output_dict['loss_lattice'],
++            'coord_loss':              output_dict['loss_coord'],
++            'type_loss':               output_dict['loss_type'],            # diffusion-internal MSE
++            'density_loss':            output_dict['loss_density'],
++            # Exp5 SA1 additions
++            'loss_diffusion_type':     output_dict['loss_diffusion_type'],
++            'loss_type_ce_head':       output_dict['loss_type_ce_head'],
++            'loss_type_total':         output_dict['loss_type_total'],
+         }, on_step=True, on_epoch=True, prog_bar=True)
+         if output_dict['loss'].isnan():
+             return None
+@@ -392,10 +536,54 @@
+ 
+     def compute_stats(self, output_dict, prefix):
+         log_dict = {
+-            f'{prefix}_loss':         output_dict['loss'],
+-            f'{prefix}_lattice_loss': output_dict['loss_lattice'],
+-            f'{prefix}_coord_loss':   output_dict['loss_coord'],
+-            f'{prefix}_type_loss':    output_dict['loss_type'],
+-            f'{prefix}_density_loss': output_dict['loss_density'],
++            f'{prefix}_loss':              output_dict['loss'],
++            f'{prefix}_lattice_loss':      output_dict['loss_lattice'],
++            f'{prefix}_coord_loss':        output_dict['loss_coord'],
++            f'{prefix}_type_loss':         output_dict['loss_type'],
++            f'{prefix}_density_loss':      output_dict['loss_density'],
++            # Exp5 SA1 additions
++            f'{prefix}_loss_diffusion_type': output_dict['loss_diffusion_type'],
++            f'{prefix}_loss_type_ce_head':   output_dict['loss_type_ce_head'],
++            f'{prefix}_loss_type_total':     output_dict['loss_type_total'],
+         }
+-        return log_dict, output_dict['loss']
+\ No newline at end of file
++        return log_dict, output_dict['loss']
++
++    # ─────────────────────────────────────────────────────────────────────────
++    # Exp5 SA1: head_predict_types — eval-time inference helper for SA3
++    # ─────────────────────────────────────────────────────────────────────────
++
++    @torch.no_grad()
++    def head_predict_types(self, batch) -> torch.Tensor:
++        """
++        Eval-time helper: predict atom types from head only (no diffusion).
++
++        SA3 uses this in evaluation/sample path to obtain per-slot Z predictions
++        independent of the diffusion atom-type score. The slot ordering matches
++        dataset_v2 (sorted by distance to center); SA3 must do its own
++        Hungarian assignment against pred_coords for true TypeAcc reporting
++        (handoff §2.3).
++
++        Parameters
++        ----------
++        batch : PyG Batch with xmu_xanes / chi1 / feff_features / center_element_Z
++
++        Returns
++        -------
++        LongTensor (B, n_atoms)  — argmax-decoded Z values, ∈ [1, n_elements]
++                                   (we add 1 because head is trained on Z-1 indices)
++        """
++        was_training = self.training
++        self.eval()
++        try:
++            spectrum_cond = self.spectrum_encoder(
++                batch.xmu_xanes,
++                batch.chi1,
++                batch.feff_features,
++                batch.center_element_Z,
++            )
++            head_logits = self.type_head(spectrum_cond)        # (B, n_atoms, n_elements)
++            pred_classes = head_logits.argmax(dim=-1)          # (B, n_atoms), in [0, n_elem-1]
++            return (pred_classes + 1).long()                   # back to 1-indexed Z
++        finally:
++            if was_training:
++                self.train()
+\ No newline at end of file

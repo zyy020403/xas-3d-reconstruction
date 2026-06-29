@@ -1,0 +1,92 @@
+# conf_xas/model/diffusion_xas.yaml
+# Step 3.4 — XAS-conditional diffusion model config (Exp5' STEP1)
+# =============================================================================
+# Exp5 v2 改动一览(继承,不变):
+#   1. 继承 v1 SA1: center embedding (n_center_elements=95, center_emb_dim=16)
+#      → SpectrumEncoder.output_dim = 256 + 16 = 272
+#      → decoder.latent_dim = time_dim(256) + spectrum(272) = 528
+#   2. 主线 1: SpectrumEncoder fusion 块替换为 MV-attention
+#      (mv_attention.num_heads=4, residual_alpha=0.5 固定不可学)
+#   3. 主线 2: cost_density 0.5 → 0.2 (errata 2 §1 _density_loss 塌缩根因减弱)
+#   4. 撤销 v1 head: 不加 TypeClassifierHead
+#      (Exp3 + Exp5 v1 SA2 三重证伪;cost_type 还原 1.0,不再被 head 接管)
+#
+# Exp5' STEP1 新增(本次):
+#   5. 三件套物理 loss (proposal §2.1-2.3, λ 锁定 proposal §2.4):
+#      - cost_pairwise_min : 1.0   (主线攻 5-11% min_d gate-pass disaster)
+#      - cost_shell_dist   : 0.5   (主线攻 shell-1 distance score = 0)
+#      - cost_shell_count  : 0.2   (辅助攻 shell-{1,2} 配位数)
+#      均使用 shell_boundaries.pkl 5 字段真值(由 dataset_v2 inject)
+#
+# v2 vs Exp4 ckpt:
+#   decoder 第一层 latent_dim 528 vs Exp4 的 512 → strict=False 加载会跳过该层
+#   但 v2 是 from-scratch 训练, 不 fine-tune from Exp4 ckpt (proposal v2 §2 红线)
+
+_target_: diffusion_w_type_xas.CSPDiffusion
+
+# ── 4 项主 loss 权重(Exp4 形态,撤销 v1 head 接管)──────────────────────────
+cost_lattice: 0.0    # → keep_lattice = True,采样时晶格全程为 diag(L,L,L)
+cost_coord:   1.0
+cost_type:    1.0
+cost_density: 0.2    # Exp5 v2: 0.5 → 0.2, 减弱 _density_loss 塌缩剂强度
+                     #          (EXP4_FINAL_REPORT_ERRATA_2 §1.4)
+
+# ── Exp5' STEP1: 3 项新物理 loss 权重(proposal §2.4 锁定)──────────────────
+cost_pairwise_min: 1.0   # 主线: 攻 SA-METRICS-V3 dry-run 5-11% min_d gate-pass disaster
+                         #       relu(threshold=1.5 Å - d_pair) 平方均值
+cost_shell_dist:   0.5   # 主线: 攻 shell-1 distance score = 0
+                         #       gap-split shell-{1,2} pred 距离 vs 真值 MSE
+cost_shell_count:  0.2   # 辅助: shell-{1,2} 配位数 MSE
+                         #       (proposal §2.3 接受 float MSE 软回归)
+
+# ── 时间嵌入 ──────────────────────────────────────────────────────────────────
+time_dim: 256
+
+# ── SpectrumEncoder 三分支输入维度 ─────────────────────────────────────────
+spectrum_latent_dim: 256
+xmu_dim:  150
+chi_dim:  200
+feat_dim: 74
+
+# ── center-element conditioning (v1 SA1 carry-over) ────────────────────────
+n_center_elements: 95   # max(Z)=94 实测 (Pu); slot 0 reserved for padding
+center_emb_dim:    16
+# spectrum encoder output_dim = spectrum_latent_dim + center_emb_dim = 272
+latent_dim: 272
+
+# ── Exp5 v2 主线 1: MV-attention fusion ──────────────────────────────────
+# 三 view (xmu/chi/feff) 各 256d → MultiheadAttention(num_heads=4)
+#   → residual + LN → Linear → 256d
+# residual_alpha 固定不可学 (proposal v2 §3.1 红线)
+mv_attention:
+  num_heads:      4    # 256 / 4 = 64 per head
+  residual_alpha: 0.5  # 固定 float, 不可学
+
+# ── Decoder (CSPNet, latent_dim 还原 512 → 528 因 spectrum_out 升 256→272)──
+decoder:
+  _target_: diffcsp.pl_modules.cspnet.CSPNet
+  hidden_dim:    256
+  latent_dim:    528      # time_dim(256) + spectrum(272) = 528  (Exp4 was 512)
+  num_layers:    6
+  max_atoms:     100
+  act_fn:        silu
+  dis_emb:       sin
+  num_freqs:     10
+  edge_style:    fc
+  cutoff:        6.0
+  max_neighbors: 20
+  ln:            true
+  ip:            true
+  smooth:        true
+  pred_type:     true
+
+# ── 噪声调度器 ────────────────────────────────────────────────────────────────
+beta_scheduler:
+  _target_: diffcsp.pl_modules.diff_utils.BetaScheduler
+  timesteps:      1000
+  scheduler_mode: cosine
+
+sigma_scheduler:
+  _target_: diffcsp.pl_modules.diff_utils.SigmaScheduler
+  timesteps:   1000
+  sigma_begin: 0.005

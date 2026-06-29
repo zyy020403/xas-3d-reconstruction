@@ -1,0 +1,101 @@
+========================================================================
+ Experiment 4 — Step 1 Completion Report
+========================================================================
+
+[1] Total kept samples: 128382
+    expected range: 120,000 - 130,000 (MA estimate 126K)
+    verdict: OK
+
+[2] Split counts
+    train     mp_ids= 33147  samples= 102660  (79.96%)
+    val       mp_ids=  4142  samples=  12912  (10.06%)
+    test      mp_ids=  2485  samples=   7696  (5.99%)
+    holdout   mp_ids=  1657  samples=   5114  (3.98%)
+    holdout range check (3,000-5,000): DEVIATION  (got 5114)
+
+[3] mp_id zero-intersection assertion
+    train    ∩ val      =    0  [OK]
+    test     ∩ train    =    0  [OK]
+    test     ∩ val      =    0  [OK]
+    holdout  ∩ train    =    0  [OK]
+    holdout  ∩ val      =    0  [OK]
+    holdout  ∩ test     =    0  [OK]
+    overall: PASS
+
+[4] feff feature dim
+    feat_names count: 74  [OK]
+    scaler.center_.shape: (74,)
+
+[5] has_pre_edge value check
+    value_counts: {1: 95827, 0: 32555}
+    values ⊆ {0,1}: OK
+    has_pre_edge=1 share: 74.64%
+
+[6] scaler.center_ vs train 74-d median
+    max |scaler.center_ - train_median| = 0  [OK]
+
+[7] Holdout element distribution
+    distinct elements in holdout: 84  [OK]
+    top 5:
+      O    n=  904  pct=17.68%
+      Li   n=  262  pct=5.12%
+      P    n=  219  pct=4.28%
+      F    n=  149  pct=2.91%
+      Fe   n=  131  pct=2.56%
+    O pct in holdout: 17.68%  [OK]
+    Li pct in holdout: 5.12%  [OK]
+
+[8] Rare-element placement
+    rare elements (count<20): 4
+    list: ['Ar', 'He', 'Kr', 'Ne']
+    rare-sample split distribution: {'train': 14}
+    all rare samples in train? YES [OK]
+
+[9] Scaler reload sanity
+    reloaded.transform(X[:5]).shape = (5, 74)  [OK]
+
+[10] Exclusion reason breakdown
+    iqr_outlier             2156
+    chi_invalid             1911
+    missing_poscar           790
+    H_element                479
+    TOTAL excluded: 5336
+
+    vs MA estimates:
+    parse_fail           actual=     0  expected[0,5]  [OK]
+    H_element            actual=   479  expected[1300,1800]  [DEVIATION]
+    missing_poscar       actual=   790  expected[600,1000]  [OK]
+    iqr_outlier          actual=  2156  expected[3000,10000]  [DEVIATION]
+
+[11] element_distribution.csv
+    written: 88 element rows
+
+[12] Produced files in C:\Users\T-Cat\Desktop\DiffCSP-main\experiment4\step1:
+    data_inventory.csv                                         56830.2 KB
+    element_distribution.csv                                       2.5 KB
+    feff_feature_scaler.pkl                                        1.6 KB
+    feff_feature_stats.csv                                         6.8 KB
+    holdout_ids.txt                                               17.2 KB
+    holdout_samples.csv                                          220.9 KB
+    step1_0_sanity_check.py                                        7.3 KB
+    step1_0b_sanity_check_v2.py                                   10.7 KB
+    step1_1_raw_inventory.pkl                                 135307.1 KB
+    step1_1_scan_and_parse.py                                      7.0 KB
+    step1_2_filter_outliers.py                                     5.0 KB
+    step1_2_filtered_inventory.pkl                            129893.4 KB
+    step1_3_feff_feature_names.txt                                 1.0 KB
+    step1_3_feff_imputation.py                                     6.1 KB
+    step1_3_imputed_inventory.pkl                             130899.9 KB
+    step1_3_n_nan_before_impute.csv                                1.2 KB
+    step1_4_full_inventory.pkl                                132257.7 KB
+    step1_4_split_stratified.py                                    8.9 KB
+    step1_5_fit_scaler.py                                          3.4 KB
+    step1_6_summary.py                                             7.5 KB
+    step1_excluded_log.csv                                       291.6 KB
+    step1_run_all.py                                               1.3 KB
+    test_ids.txt                                                  25.7 KB
+    test_samples.csv                                             331.7 KB
+    train_ids.txt                                                342.8 KB
+    train_samples.csv                                           4427.4 KB
+    val_ids.txt                                                   42.8 KB
+    val_samples.csv                                              556.5 KB

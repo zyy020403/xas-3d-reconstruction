@@ -1,0 +1,44 @@
+这个过程其实我做了不少修改，除了安装一些必要的包，对于3.3我做了修改错误很清楚：diffcsp/common/utils.py 在模块级别读取环境变量 PROJECT_ROOT，但脚本里只设了 Python 变量，没有设环境变量。在 instantiate 之前加一行 os.environ["PROJECT_ROOT"] = PROJECT_ROOT 即可。
+
+Ran a command, created a file, read a file
+
+Ran a command, created a file, read a file
+
+只加了一行，位置在路径常量之后、所有 import 之前：
+
+python
+
+os.environ["PROJECT_ROOT"] = PROJECT_ROOT
+
+为什么必须在 import 之前：diffcsp/common/utils.py 的第 92 行是模块级代码 PROJECT_ROOT: Path = Path(get_env("PROJECT_ROOT"))，Python 第一次 import 任何 diffcsp.* 子模块时就会执行它。如果环境变量还没设，立刻抛 KeyError。把 os.environ 赋值放在所有 import 之前，就能保证 utils.py 被加载时已经能读到这个值。还没有，这是一个真实的错误。Windows 上用 num_workers > 0 启动多进程时，必须有 if __name__ == '__main__': 保护，否则子进程会尝试重新导入主脚本，触发这个 RuntimeError。
+
+最快的修复是把 xas_datamodule.py 里的 num_workers 全部改成 0：
+
+python
+
+datamodule = XASDataModule(
+    batch_size  = {"train": 16, "val": 8, "test": 8},
+    num_workers = {"train": 0,  "val": 0, "test": 0},  # Windows 下必须为 0
+)
+
+把 step3.3_train.py 里第4节的那三行改掉了。对于xas dataset我做了改动了四处，比指示里的方案更彻底——直接用 source_path 构造路径，完全不需要 _folder_root() 函数：
+
+
+
+
+
+__init__ 预验证 — poscar_path 改为 os.path.join(first_site["source_path"], "POSCAR_supercell_fixed")，去掉了 root + folder_name 拼接
+
+
+
+__getitem__ POSCAR 路径 — 同上，直接用 first_site["source_path"]
+
+
+
+is_ionic — 改为 1 if bool(site["is_ionic"]) else 0，直接读 inventory 列
+
+
+
+chi.dat 路径 — 改为 os.path.join(site["source_path"], "chi.dat")，去掉了 _folder_root(src) 调用
+
+_folder_root() 函数保留在文件里但不再被调用，不影响运行。

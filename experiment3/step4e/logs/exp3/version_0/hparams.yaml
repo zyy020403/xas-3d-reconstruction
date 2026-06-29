@@ -1,0 +1,48 @@
+cost_lattice: 0.0
+cost_coord: 1.0
+cost_type: 1.0
+time_dim: 256
+spectrum_latent_dim: 256
+xmu_dim: 150
+chi_dim: 200
+feat_dim: 73
+latent_dim: 256
+decoder:
+  _target_: diffcsp.pl_modules.cspnet.CSPNet
+  hidden_dim: 256
+  latent_dim: 512
+  num_layers: 6
+  max_atoms: 100
+  act_fn: silu
+  dis_emb: sin
+  num_freqs: 10
+  edge_style: fc
+  cutoff: 6.0
+  max_neighbors: 20
+  ln: true
+  ip: true
+  smooth: true
+  pred_type: true
+beta_scheduler:
+  _target_: diffcsp.pl_modules.diff_utils.BetaScheduler
+  timesteps: 1000
+  scheduler_mode: cosine
+sigma_scheduler:
+  _target_: diffcsp.pl_modules.diff_utils.SigmaScheduler
+  timesteps: 1000
+  sigma_begin: 0.005
+  sigma_end: 0.5
+vocab_path: C:\Users\T-Cat\Desktop\DiffCSP-main\experiment3\step3b\elem_vocab.json
+optim:
+  optimizer:
+    _target_: torch.optim.Adam
+    lr: 0.0001
+    betas:
+    - 0.9
+    - 0.999
+    weight_decay: 0.0
+  use_lr_scheduler: true
+  lr_scheduler:
+    _target_: torch.optim.lr_scheduler.CosineAnnealingLR
+    T_max: 500
+    eta_min: 1.0e-06

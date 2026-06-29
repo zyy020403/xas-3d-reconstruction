@@ -1,0 +1,64 @@
+--- /home/claude/exp5/code/step3/conf_xas/model/diffusion_xas.yaml.bak_exp4	2026-04-27 16:10:16.000000000 +0000
++++ /home/claude/exp5/code/step3/conf_xas/model/diffusion_xas.yaml	2026-04-27 16:37:30.918842028 +0000
+@@ -1,12 +1,23 @@
+ # conf/model/diffusion_xas.yaml  (experiment2/step3/conf_xas/model/)
+ # Step 3.4 — 扩散模型配置（XAS 条件版）
++# Exp5 SA1 patch: + center embedding + TypeClassifierHead + three-mode type-loss flag
++#
++# Exp5 SA1 改动一览（与 EXP5_STEP1_HANDOFF §2.2 row 5 对齐）：
++#   1. spectrum_latent_dim 仍是 256（fusion 层不变 → Exp4 ckpt 该层 strict=False 加载 OK）
++#      但 SpectrumEncoder.output_dim = 256 + 16 = 272（latent ⊕ center_emb）
++#   2. 新增 center embedding 字段：n_center_elements=95, center_emb_dim=16
++#   3. 新增 TypeClassifierHead 字段：type_head_hidden_dim, n_atoms, n_elements
++#   4. 新增 three-mode type-loss flag：type_loss_mode + diffusion_type_weight + head_type_weight
++#   5. decoder.latent_dim: 512 → 528（time_dim 256 + spectrum 272）
++#      ⚠️ Exp4 ckpt 第一个 decoder Linear (in=512) 与此 (in=528) shape mismatch
++#         strict=False 加载会跳过该层 → SA2 phased training 必做（Notes §8.1）
+ 
+ _target_: diffusion_w_type_xas.CSPDiffusion
+ 
+ # ── 晶格固定（关键，不预测晶格）──────────────────────────────────────────────
+-cost_lattice: 0.0   # → keep_lattice = True，采样时晶格全程为 diag(12,12,12)
++cost_lattice: 0.0   # → keep_lattice = True，采样时晶格全程为 diag(6,6,6)
+ cost_coord:   1.0
+-cost_type:    1.0
++cost_type:    1.0   # ⚠️ Exp5 SA1: 该字段被 diffusion_type_weight 覆盖（向后兼容保留）
+ 
+ # ── 时间嵌入 ──────────────────────────────────────────────────────────────────
+ time_dim: 256
+@@ -17,15 +28,31 @@
+ chi_dim:  200
+ feat_dim: 74
+ 
+-# latent_dim = spectrum_latent_dim
+-# decoder 实际接收 latent_dim = time_dim + latent_dim = 512
+-latent_dim: 256
++# ── Exp5 SA1: center-element conditioning ────────────────────────────────────
++n_center_elements: 95   # max(Z)=94 实测; slot 0 padding
++center_emb_dim:    16
++
++# latent_dim = spectrum_latent_dim + center_emb_dim = 272
++# decoder 实际接收 latent_dim = time_dim + 272 = 528  (Exp4: 512)
++latent_dim: 272
++
++# ── Exp5 SA1: TypeClassifierHead ─────────────────────────────────────────────
++type_head_hidden_dim: 512
++n_atoms:    20
++n_elements: 100   # 与 diffusion 内部 MAX_ATOMIC_NUM 对齐（OPEN QUESTION 见 OUTPUT.md）
++
++# ── Exp5 SA1: three-mode type-loss aggregation ───────────────────────────────
++# diffusion_only / head_only / both
++# SA2 default: both (handoff §2.4); SA2-续 备选 head_only
++type_loss_mode:           both
++diffusion_type_weight:    1.0
++head_type_weight:         0.5
+ 
+ # ── Decoder（CSPNet）────────────────────────────────────────────────────────
+ decoder:
+   _target_: diffcsp.pl_modules.cspnet.CSPNet
+   hidden_dim:    256
+-  latent_dim:    512      # time_dim(256) + spectrum_latent_dim(256)
++  latent_dim:    528      # Exp5 SA1: time_dim(256) + spectrum_out(272). Was 512 in Exp4.
+   num_layers:    6
+   max_atoms:     100
+   act_fn:        silu

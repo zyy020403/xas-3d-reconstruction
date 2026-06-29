@@ -1,0 +1,52 @@
+# conf/model/diffusion_xas.yaml  (experiment2/step3/conf_xas/model/)
+# Step 3.4 — 扩散模型配置（XAS 条件版）
+
+_target_: diffusion_w_type_xas.CSPDiffusion
+
+# ── 晶格固定（关键，不预测晶格）──────────────────────────────────────────────
+cost_lattice: 0.0   # → keep_lattice = True，采样时晶格全程为 diag(12,12,12)
+cost_coord:   1.0
+cost_type:    1.0
+
+# ── 时间嵌入 ──────────────────────────────────────────────────────────────────
+time_dim: 256
+
+# ── 谱编码器输出维度 ──────────────────────────────────────────────────────────
+spectrum_latent_dim: 256
+xmu_dim:  150
+chi_dim:  200
+feat_dim: 73
+
+# latent_dim = spectrum_latent_dim
+# decoder 实际接收 latent_dim = time_dim + latent_dim = 512
+latent_dim: 256
+
+# ── Decoder（CSPNet）────────────────────────────────────────────────────────
+decoder:
+  _target_: diffcsp.pl_modules.cspnet.CSPNet
+  hidden_dim:    256
+  latent_dim:    512      # time_dim(256) + spectrum_latent_dim(256)
+  num_layers:    6
+  max_atoms:     100
+  act_fn:        silu
+  dis_emb:       sin
+  num_freqs:     10
+  edge_style:    fc
+  cutoff:        6.0
+  max_neighbors: 20
+  ln:            true
+  ip:            true
+  smooth:        true
+  pred_type:     true
+
+# ── 噪声调度器 ────────────────────────────────────────────────────────────────
+beta_scheduler:
+  _target_: diffcsp.pl_modules.diff_utils.BetaScheduler
+  timesteps:      1000
+  scheduler_mode: cosine
+
+sigma_scheduler:
+  _target_: diffcsp.pl_modules.diff_utils.SigmaScheduler
+  timesteps:   1000
+  sigma_begin: 0.005
+  sigma_end:   0.5

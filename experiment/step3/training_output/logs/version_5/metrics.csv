@@ -1,0 +1,3 @@
+lr-Adam,step,train_loss_step,lattice_loss_step,coord_loss_step,epoch
+0.0001,9,,,,
+,9,30.15472984313965,29.307167053222656,0.8475622534751892,0
